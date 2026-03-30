@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新闻浏览 - FinNews Monitor</title>
+  <style>
+    :root {
+      --primary:#1a56db; --primary-light:#ebf5ff;
+      --danger:#e02424; --danger-light:#fde8e8;
+      --success:#057a55; --success-light:#def7ec;
+      --warning:#c27803; --warning-light:#fdf6b2;
+      --neutral:#6b7280; --neutral-light:#f3f4f6;
+      --bg:#f1f5f9; --card:#fff; --border:#e5e7eb;
+      --text:#111827; --text-2:#6b7280;
+      --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+    .sidebar { width:220px; background:#0f172a; color:#cbd5e1; display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:100; }
+    .logo { padding:20px 20px 16px; border-bottom:1px solid #1e293b; }
+    .logo-title { font-size:18px; font-weight:700; color:#f1f5f9; }
+    .logo-sub { font-size:11px; color:#475569; margin-top:3px; }
+    .nav { padding:12px 0; flex:1; }
+    .nav-label { padding:8px 16px; font-size:10px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.08em; }
+    .nav-a { display:flex; align-items:center; gap:10px; padding:9px 20px; color:#94a3b8; text-decoration:none; font-size:13.5px; transition:all .15s; }
+    .nav-a:hover { background:#1e293b; color:#e2e8f0; }
+    .nav-a.active { background:#1d4ed8; color:#fff; font-weight:500; }
+    .nav-a .ico { font-size:15px; width:18px; text-align:center; }
+    .sidebar-footer { padding:14px 20px; border-top:1px solid #1e293b; font-size:12px; color:#475569; display:flex; align-items:center; gap:6px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .main { margin-left:220px; flex:1; display:flex; flex-direction:column; }
+    .topbar { background:var(--card); border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+    .topbar h1 { font-size:18px; font-weight:600; }
+    .page { padding:24px 28px; }
+    .btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border:none; border-radius:6px; cursor:pointer; font-size:12.5px; font-weight:500; transition:all .15s; text-decoration:none; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); }
+    .card-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .card-head h2 { font-size:15px; font-weight:600; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th { padding:9px 16px; text-align:left; font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; background:#f9fafb; border-bottom:1px solid var(--border); }
+    td { padding:11px 16px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#fafafa; }
+    .badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:100px; font-size:11.5px; font-weight:500; }
+    .b-red { background:var(--danger-light); color:var(--danger); }
+    .b-green { background:var(--success-light); color:var(--success); }
+    .b-gray { background:var(--neutral-light); color:var(--neutral); }
+    .b-yellow { background:var(--warning-light); color:var(--warning); }
+    .tag { display:inline-block; padding:2px 7px; border-radius:4px; font-size:11.5px; margin:2px; background:var(--primary-light); color:var(--primary); }
+    .tag-gray { background:var(--neutral-light); color:var(--neutral); }
+    .filter-tabs { display:flex; gap:8px; }
+    .tab { padding:5px 14px; border-radius:6px; font-size:13px; text-decoration:none; color:var(--text-2); border:1px solid var(--border); background:#fff; }
+    .tab:hover { background:#f3f4f6; }
+    .tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .date-tabs { display:flex; gap:6px; }
+    .date-tab { padding:4px 10px; border-radius:6px; font-size:12px; text-decoration:none; color:var(--text-2); border:1px solid var(--border); background:#fff; white-space:nowrap; }
+    .date-tab:hover { background:#f3f4f6; }
+    .date-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .pagination { padding:16px 20px; display:flex; justify-content:center; gap:8px; border-top:1px solid var(--border); }
+    .page-btn { padding:6px 12px; border-radius:6px; font-size:13px; text-decoration:none; color:var(--text-2); border:1px solid var(--border); background:#fff; }
+    .page-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .empty { padding:48px 20px; text-align:center; color:var(--text-2); }
+    a { color:var(--primary); }
+    a:hover { text-decoration:underline; }
+    .category-tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:600; background:#f3f4f6; color:#6b7280; }
+    .sortable { cursor:pointer; user-select:none; position:relative; }
+    .sortable:hover { background:#f3f4f6; }
+    .sortable .arrow { font-size:10px; margin-left:4px; color:#9ca3af; }
+    .sortable.active .arrow { color:var(--primary); }
+    .sortable.asc .arrow::after { content:'▲'; }
+    .sortable.desc .arrow::after { content:'▼'; }
+    .sortable:not(.asc):not(.desc) .arrow::after { content:'⇅'; opacity:0.5; }
+    .search-box { display:flex; gap:8px; align-items:center; }
+    .search-input { padding:7px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px; width:240px; }
+    .search-input:focus { outline:none; border-color:var(--primary); }
+    .search-btn { padding:7px 14px; background:var(--primary); color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; }
+    .search-btn:hover { background:#1e40af; }
+    .clear-search { color:var(--text-2); text-decoration:none; font-size:12px; margin-left:8px; }
+    .clear-search:hover { color:var(--primary); }
+    .position-select { padding:7px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:#fff; cursor:pointer; }
+    .position-select:focus { outline:none; border-color:var(--primary); }
+    .filter-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .filter-group { display:flex; align-items:center; gap:8px; }
+    .filter-label { font-size:12px; color:var(--text-2); }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">📈 FinNews</div>
+      <div class="logo-sub">金融新闻监控助手</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">监控</div>
+      <a href="/" class="nav-a"><span class="ico">🏠</span> 系统概览</a>
+      <a href="/news" class="nav-a active"><span class="ico">📰</span> 新闻浏览</a>
+      <div class="nav-label" style="margin-top:4px">配置</div>
+      <a href="/portfolio" class="nav-a"><span class="ico">💼</span> 持仓管理</a>
+      <a href="/settings" class="nav-a"><span class="ico">⚙️</span> 系统设置</a>
+    </nav>
+    <div class="sidebar-footer"><span class="dot"></span> 服务运行中</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>📰 新闻浏览</h1>
+      <span style="font-size:13px;color:#6b7280">共 <%= totalCount %> 条新闻</span>
+    </div>
+    <div class="page">
+      <div class="card">
+        <div class="card-head">
+          <div class="filter-row">
+            <div class="filter-tabs">
+              <a href="/news?filter=high&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= dateRange ? '&dateRange=' + dateRange : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>" class="tab <%= filter === 'high' ? 'active' : '' %>">⚡ 高影响</a>
+              <a href="/news?filter=relevant&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= dateRange ? '&dateRange=' + dateRange : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>" class="tab <%= filter === 'relevant' ? 'active' : '' %>">🎯 命中持仓</a>
+              <a href="/news?filter=all&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= dateRange ? '&dateRange=' + dateRange : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>" class="tab <%= filter === 'all' ? 'active' : '' %>">全部新闻</a>
+            </div>
+            <% if (sources && sources.length > 0) { %>
+              <div class="filter-group">
+                <span class="filter-label">来源:</span>
+                <select class="position-select" onchange="filterBySource(this.value)">
+                  <option value="">全部来源</option>
+                  <% sources.forEach(function(src) { %>
+                    <option value="<%= src %>" <%= sourceFilter === src ? 'selected' : '' %>><%= src %></option>
+                  <% }); %>
+                </select>
+              </div>
+            <% } %>
+            <% if (positions && positions.length > 0) { %>
+              <div class="filter-group">
+                <span class="filter-label">持仓:</span>
+                <select class="position-select" onchange="filterByPosition(this.value)">
+                  <option value="">全部持仓</option>
+                  <% positions.forEach(function(pos) { %>
+                    <option value="<%= pos.id %>" <%= positionId === pos.id ? 'selected' : '' %>><%= pos.name %> (<%= pos.code %>)</option>
+                  <% }); %>
+                </select>
+              </div>
+            <% } %>
+            <div class="filter-group">
+              <span class="filter-label">时间:</span>
+              <div class="date-tabs">
+                <a href="/news?filter=<%= filter %>&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>&dateRange=all" class="date-tab <%= dateRange === 'all' ? 'active' : '' %>">全部</a>
+                <a href="/news?filter=<%= filter %>&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>&dateRange=today" class="date-tab <%= dateRange === 'today' ? 'active' : '' %>">今天</a>
+                <a href="/news?filter=<%= filter %>&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>&dateRange=2days" class="date-tab <%= dateRange === '2days' || (!dateRange || dateRange === '') ? 'active' : '' %>">近两天</a>
+                <a href="/news?filter=<%= filter %>&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>&dateRange=5days" class="date-tab <%= dateRange === '5days' ? 'active' : '' %>">近五天</a>
+                <a href="/news?filter=<%= filter %>&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>&dateRange=7days" class="date-tab <%= dateRange === '7days' ? 'active' : '' %>">近七天</a>
+                <a href="/news?filter=<%= filter %>&page=1&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>&dateRange=30days" class="date-tab <%= dateRange === '30days' ? 'active' : '' %>">近一月</a>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <form class="search-box" action="/news" method="GET">
+              <input type="hidden" name="filter" value="<%= filter %>">
+              <input type="hidden" name="sort" value="<%= sort %>">
+              <input type="hidden" name="order" value="<%= order %>">
+              <% if (positionId) { %>
+                <input type="hidden" name="position" value="<%= positionId %>">
+              <% } %>
+              <% if (dateRange) { %>
+                <input type="hidden" name="dateRange" value="<%= dateRange %>">
+              <% } %>
+              <% if (sourceFilter) { %>
+                <input type="hidden" name="source" value="<%= sourceFilter %>">
+              <% } %>
+              <input type="text" name="search" class="search-input" placeholder="搜索标题或摘要..." value="<%= search || '' %>">
+              <button type="submit" class="search-btn">🔍 搜索</button>
+              <% if (search) { %>
+                <a href="/news?filter=<%= filter %>&sort=<%= sort %>&order=<%= order %><%= positionId ? '&position=' + positionId : '' %><%= dateRange ? '&dateRange=' + dateRange : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>" class="clear-search">✕ 清除</a>
+              <% } %>
+            </form>
+            <span style="font-size:13px;color:#6b7280">第 <%= page %> / <%= totalPages %> 页</span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width:42%" class="sortable <%= sort === 'title' ? 'active ' + order : '' %>" onclick="sortBy('title')">
+                标题<span class="arrow"></span>
+              </th>
+              <th class="sortable <%= sort === 'source' ? 'active ' + order : '' %>" onclick="sortBy('source')">
+                来源<span class="arrow"></span>
+              </th>
+              <th class="sortable <%= sort === 'publishTime' ? 'active ' + order : '' %>" onclick="sortBy('publishTime')">
+                时间<span class="arrow"></span>
+              </th>
+              <th>命中关键词</th>
+              <th class="sortable <%= sort === 'score' ? 'active ' + order : '' %>" onclick="sortBy('score')">
+                影响评分<span class="arrow"></span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (articles.length === 0) { %>
+              <tr><td colspan="5"><div class="empty">暂无新闻数据，请先在首页点击"立即采集"</div></td></tr>
+            <% } else { %>
+              <% articles.forEach(function(article) { %>
+                <tr>
+                  <td>
+                    <a href="/news/detail/<%= article.id %>" target="_blank" style="font-weight:500;line-height:1.4">
+                      <%= article.title.length > 50 ? article.title.substring(0, 50) + '…' : article.title %>
+                    </a>
+                  </td>
+                  <td style="white-space:nowrap">
+                    <div style="font-size:12.5px;font-weight:500"><%= article.sourceName %></div>
+                  </td>
+                  <td style="white-space:nowrap;color:#6b7280;font-size:12px">
+                    <%= new Date(article.publishTime).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) %>
+                  </td>
+                  <td>
+                    <% var keys = article.keywords || []; %>
+                    <% if (keys.length > 0) { %>
+                      <% keys.slice(0, 3).forEach(function(k) { %><span class="tag"><%= k %></span><% }); %>
+                      <% if (keys.length > 3) { %><span class="tag tag-gray">+<%= keys.length-3 %></span><% } %>
+                    <% } else { %>
+                      <span style="color:#d1d5db;font-size:12px">—</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (article.aiImpactScore >= 80) { %>
+                      <span class="badge b-red">⚡ <%= article.aiImpactScore %></span>
+                    <% } else if (article.aiImpactScore >= 50) { %>
+                      <span class="badge b-green"><%= article.aiImpactScore %></span>
+                    <% } else if (article.aiImpactScore > 0) { %>
+                      <span class="badge b-gray"><%= article.aiImpactScore %></span>
+                    <% } else { %>
+                      <span class="badge b-gray">—</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+
+        <% if (totalPages > 1) { %>
+          <div class="pagination">
+            <% if (page > 1) { %><a href="/news?page=<%= page-1 %>&filter=<%= filter %>&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= dateRange ? '&dateRange=' + dateRange : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>" class="page-btn">← 上一页</a><% } %>
+            <% for (var i = Math.max(1, page-2); i <= Math.min(totalPages, page+2); i++) { %>
+              <a href="/news?page=<%= i %>&filter=<%= filter %>&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= dateRange ? '&dateRange=' + dateRange : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>" class="page-btn <%= page === i ? 'active' : '' %>"><%= i %></a>
+            <% } %>
+            <% if (page < totalPages) { %><a href="/news?page=<%= page+1 %>&filter=<%= filter %>&sort=<%= sort %>&order=<%= order %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= positionId ? '&position=' + positionId : '' %><%= dateRange ? '&dateRange=' + dateRange : '' %><%= sourceFilter ? '&source=' + encodeURIComponent(sourceFilter) : '' %>" class="page-btn">下一页 →</a><% } %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const currentSort = "<%= sort %>";
+    const currentOrder = "<%= order %>";
+    const currentFilter = "<%= filter %>";
+    const currentSearch = "<%= search || '' %>";
+    const currentPosition = "<%= positionId || '' %>";
+    const currentDateRange = "<%= dateRange || '' %>";
+    const currentSource = "<%= sourceFilter || '' %>";
+
+    function sortBy(field) {
+      let newOrder = 'desc';
+      if (currentSort === field && currentOrder === 'desc') {
+        newOrder = 'asc';
+      }
+      const searchParam = currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : '';
+      const positionParam = currentPosition ? `&position=${currentPosition}` : '';
+      const dateRangeParam = currentDateRange ? `&dateRange=${currentDateRange}` : '';
+      const sourceParam = currentSource ? `&source=${encodeURIComponent(currentSource)}` : '';
+      window.location.href = `/news?filter=${currentFilter}&sort=${field}&order=${newOrder}${searchParam}${positionParam}${dateRangeParam}${sourceParam}`;
+    }
+
+    function filterByPosition(positionId) {
+      const searchParam = currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : '';
+      const positionParam = positionId ? `&position=${positionId}` : '';
+      const dateRangeParam = currentDateRange ? `&dateRange=${currentDateRange}` : '';
+      const sourceParam = currentSource ? `&source=${encodeURIComponent(currentSource)}` : '';
+      window.location.href = `/news?filter=${currentFilter}&sort=${currentSort}&order=${currentOrder}${searchParam}${positionParam}${dateRangeParam}${sourceParam}`;
+    }
+
+    function filterBySource(sourceName) {
+      const searchParam = currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : '';
+      const positionParam = currentPosition ? `&position=${currentPosition}` : '';
+      const dateRangeParam = currentDateRange ? `&dateRange=${currentDateRange}` : '';
+      const sourceParam = sourceName ? `&source=${encodeURIComponent(sourceName)}` : '';
+      window.location.href = `/news?filter=${currentFilter}&sort=${currentSort}&order=${currentOrder}${searchParam}${positionParam}${dateRangeParam}${sourceParam}`;
+    }
+
+    function filterByDate(dateRange) {
+      const searchParam = currentSearch ? `&search=${encodeURIComponent(currentSearch)}` : '';
+      const positionParam = currentPosition ? `&position=${currentPosition}` : '';
+      const dateRangeParam = dateRange ? `&dateRange=${dateRange}` : '';
+      const sourceParam = currentSource ? `&source=${encodeURIComponent(currentSource)}` : '';
+      window.location.href = `/news?filter=${currentFilter}&sort=${currentSort}&order=${currentOrder}${searchParam}${positionParam}${dateRangeParam}${sourceParam}`;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - FinNews Monitor</title>
+  <style>
+    :root {
+      --primary:#1a56db; --primary-light:#ebf5ff;
+      --danger:#e02424; --danger-light:#fde8e8;
+      --success:#057a55; --success-light:#def7ec;
+      --warning:#c27803; --warning-light:#fdf6b2;
+      --bg:#f1f5f9; --card:#fff; --border:#e5e7eb;
+      --text:#111827; --text-2:#6b7280;
+      --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+    .sidebar { width:220px; background:#0f172a; color:#cbd5e1; display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:100; }
+    .logo { padding:20px 20px 16px; border-bottom:1px solid #1e293b; }
+    .logo-title { font-size:18px; font-weight:700; color:#f1f5f9; }
+    .logo-sub { font-size:11px; color:#475569; margin-top:3px; }
+    .nav { padding:12px 0; flex:1; }
+    .nav-label { padding:8px 16px; font-size:10px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.08em; }
+    .nav-a { display:flex; align-items:center; gap:10px; padding:9px 20px; color:#94a3b8; text-decoration:none; font-size:13.5px; transition:all .15s; }
+    .nav-a:hover { background:#1e293b; color:#e2e8f0; }
+    .nav-a.active { background:#1d4ed8; color:#fff; font-weight:500; }
+    .nav-a .ico { font-size:15px; width:18px; text-align:center; }
+    .sidebar-footer { padding:14px 20px; border-top:1px solid #1e293b; font-size:12px; color:#475569; display:flex; align-items:center; gap:6px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .main { margin-left:220px; flex:1; }
+    .topbar { background:var(--card); border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:50; }
+    .page { padding:24px 28px; max-width:860px; }
+    a { color:var(--primary); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; text-decoration:none; }
+    .btn:hover { background:#e5e7eb; text-decoration:none; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); margin-bottom:20px; }
+    .article-header { padding:24px 28px; border-bottom:1px solid var(--border); }
+    .article-title { font-size:22px; font-weight:700; line-height:1.4; margin-bottom:14px; }
+    .article-meta { display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:var(--text-2); align-items:center; }
+    .badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:100px; font-size:12px; font-weight:500; }
+    .b-red { background:var(--danger-light); color:var(--danger); }
+    .b-green { background:var(--success-light); color:var(--success); }
+    .b-gray { background:#f3f4f6; color:#6b7280; }
+    .b-blue { background:var(--primary-light); color:var(--primary); }
+    .b-yellow { background:var(--warning-light); color:var(--warning); }
+    .article-body { padding:24px 28px; }
+    .summary { font-size:15px; line-height:1.7; color:#374151; margin-bottom:20px; padding:16px; background:#f9fafb; border-radius:8px; border-left:4px solid var(--primary); }
+    .tag { display:inline-block; padding:3px 10px; border-radius:4px; font-size:12px; margin:3px; background:var(--primary-light); color:var(--primary); }
+    .section-title { font-size:14px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; margin:20px 0 10px; }
+    .ai-box { background:#fafafa; border:1px solid #e5e7eb; border-radius:8px; padding:16px 20px; margin-top:16px; }
+    .ai-box .ai-score { font-size:32px; font-weight:700; }
+    .ai-box .ai-reason { font-size:13.5px; line-height:1.6; color:#374151; margin-top:8px; }
+    .open-link { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:6px 14px; background:linear-gradient(135deg, #1a56db, #3b82f6); color:#fff; border-radius:6px; font-size:14px; font-weight:500; box-sizing:border-box; line-height:1.5; height:32px; white-space:nowrap; text-decoration:none; transition:all .2s; }
+    .open-link:hover { background:linear-gradient(135deg, #1447e6, #2563eb); transform:translateY(-1px); }
+    .analyze-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:6px 14px; background:linear-gradient(135deg, #1a56db, #3b82f6); color:#fff; border:none; border-radius:6px; font-size:14px; font-weight:500; cursor:pointer; transition:all .2s; box-sizing:border-box; line-height:1.5; height:32px; white-space:nowrap; }
+    .analyze-btn:hover { background:linear-gradient(135deg, #1447e6, #2563eb); transform:translateY(-1px); }
+    .analyze-btn:disabled { background:#9ca3af; cursor:not-allowed; transform:none; }
+    .analyze-btn.analyzing { background:#6b7280; }
+    .analyze-btn .spinner { width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; display:none; }
+    .analyze-btn.analyzing .spinner { display:block; }
+    .analyze-btn.analyzing .btn-text { display:none; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .tts-btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:6px 12px; background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; }
+    .tts-btn:hover { background:#e5e7eb; }
+    .tts-btn.playing { background:#dbeafe; color:#1a56db; border-color:#93c5fd; }
+    .tts-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .toast { position:fixed; top:20px; right:20px; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:500; color:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:1000; opacity:0; transform:translateY(-10px); transition:all .3s; }
+    .toast.show { opacity:1; transform:translateY(0); }
+    .toast.success { background:#057a55; }
+    .toast.error { background:#e02424; }
+    .toast.info { background:#1a56db; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">📈 FinNews</div>
+      <div class="logo-sub">金融新闻监控助手</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">监控</div>
+      <a href="/" class="nav-a"><span class="ico">🏠</span> 系统概览</a>
+      <a href="/news" class="nav-a active"><span class="ico">📰</span> 新闻浏览</a>
+      <div class="nav-label" style="margin-top:4px">配置</div>
+      <a href="/portfolio" class="nav-a"><span class="ico">💼</span> 持仓管理</a>
+      <a href="/settings" class="nav-a"><span class="ico">⚙️</span> 系统设置</a>
+    </nav>
+    <div class="sidebar-footer"><span class="dot"></span> 服务运行中</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <a href="/news" class="btn">← 返回列表</a>
+      <span style="font-size:13px;color:#6b7280"><%= article.sourceName %></span>
+    </div>
+    <div class="page">
+      <div class="card">
+        <div class="article-header">
+          <div class="article-title"><%= article.title %></div>
+          <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;">
+            <button id="ttsBtn" class="tts-btn" title="朗读本页内容">
+              <span id="ttsIcon">🔊</span>
+              <span id="ttsText">朗读</span>
+            </button>
+            <select id="voiceSelect" class="tts-btn" style="cursor:pointer;min-width:200px;">
+              <option value="">默认声音</option>
+            </select>
+            <select id="rateSelect" class="tts-btn" style="cursor:pointer;min-width:80px;" title="语速">
+              <option value="0.5">0.5x</option>
+              <option value="0.8">0.8x</option>
+              <option value="1.0" selected>1.0x</option>
+              <option value="1.2">1.2x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2.0">2.0x</option>
+              <option value="2.5">2.5x</option>
+              <option value="3.0">3.0x</option>
+            </select>
+          </div>
+          <div class="article-meta">
+            <span>📰 <%= article.sourceName %></span>
+            <span>🕐 <%= new Date(article.publishTime).toLocaleString('zh-CN') %></span>
+            <% if (article.aiImpactScore >= 80) { %>
+              <span class="badge b-red">⚡ 高影响 <%= article.aiImpactScore %>分</span>
+            <% } else if (article.aiImpactScore >= 50) { %>
+              <span class="badge b-green">中影响 <%= article.aiImpactScore %>分</span>
+            <% } else if (article.aiImpactScore > 0) { %>
+              <span class="badge b-gray">低影响 <%= article.aiImpactScore %>分</span>
+            <% } %>
+            <% if (article.aiImpactDirection) { %>
+              <% if (article.aiImpactDirection === '利好') { %>
+                <span class="badge b-red">📈 利好</span>
+              <% } else if (article.aiImpactDirection === '利空') { %>
+                <span class="badge b-green">📉 利空</span>
+              <% } else { %>
+                <span class="badge b-gray">➖ 中性</span>
+              <% } %>
+            <% } %>
+            <% if (article.keywords && article.keywords.length > 0) { %>
+              <% article.keywords.forEach(function(k) { %><span class="tag"><%= k %></span><% }); %>
+            <% } %>
+            <% if (article.url) { %>
+              <a href="<%= article.url %>" target="_blank" class="open-link" style="margin:0;">🔗 查看原文</a>
+            <% } %>
+            <button id="analyzeBtn" class="analyze-btn" data-article-id="<%= article.id %>" style="margin:0;">
+              <span class="spinner"></span>
+              <span class="btn-text">🤖 AI分析</span>
+            </button>
+            <span id="analyzeStatus" style="font-size:12px;color:#6b7280;"></span>
+          </div>
+        </div>
+
+        <div class="article-body">
+          <% if (article.aiImpactReason) { %>
+            <div class="section-title">AI 分析</div>
+            <div class="ai-box">
+              <% if (article.aiImpactScore > 0) { %>
+                <% let scoreColor = article.aiImpactScore >= 80 ? '#e02424' : article.aiImpactScore >= 50 ? '#057a55' : '#6b7280'; %>
+                <div class="ai-score" style="color:<%= scoreColor %>">
+                  <%= article.aiImpactScore %>分
+                </div>
+              <% } %>
+              <div class="ai-reason"><%- article.aiImpactReason ? article.aiImpactReason.replace(/(\d+\.\s+)/g, '<br>$1').replace(/^<br>/, '') : '' %></div>
+            </div>
+          <% } %>
+
+          <% if (article.content) { %>
+            <div class="section-title">正文</div>
+            <div class="content" style="font-size:15px;line-height:1.8;color:#374151;white-space:pre-wrap;word-break:break-word;"><%= article.content %></div>
+          <% } else { %>
+            <div style="padding:20px;background:#f9fafb;border-radius:8px;text-align:center;color:#6b7280;font-size:13px;">
+              📄 正文未抓取，点击"立即分析"可自动抓取并分析
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const analyzeStatus = document.getElementById('analyzeStatus');
+    const toast = document.getElementById('toast');
+    const articleId = analyzeBtn.dataset.articleId;
+
+    function showToast(message, type = 'info') {
+      toast.textContent = message;
+      toast.className = 'toast ' + type;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+      if (analyzeBtn.disabled) return;
+
+      analyzeBtn.disabled = true;
+      analyzeBtn.classList.add('analyzing');
+      analyzeStatus.textContent = '分析中，请稍候...';
+
+      try {
+        const response = await fetch('/news/analyze/' + articleId, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showToast('✓ ' + result.message, 'success');
+          // 延迟刷新页面以显示新结果
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          showToast('✗ ' + result.message, 'error');
+          analyzeBtn.disabled = false;
+          analyzeBtn.classList.remove('analyzing');
+          analyzeStatus.textContent = '';
+        }
+      } catch (error) {
+        showToast('✗ 请求失败: ' + error.message, 'error');
+        analyzeBtn.disabled = false;
+        analyzeBtn.classList.remove('analyzing');
+        analyzeStatus.textContent = '';
+      }
+    });
+
+    // 朗读功能
+    const ttsBtn = document.getElementById('ttsBtn');
+    const ttsIcon = document.getElementById('ttsIcon');
+    const ttsText = document.getElementById('ttsText');
+    const voiceSelect = document.getElementById('voiceSelect');
+    const rateSelect = document.getElementById('rateSelect');
+    let isPlaying = false;
+    let utterance = null;
+    let voices = [];
+    let currentVoice = null;
+    let currentRate = 1.0;
+    
+    // 默认声音名称
+    const DEFAULT_VOICE_NAME = 'Microsoft Yunjian Online (Natural) - Chinese (Mainland)';
+
+    // 加载可用声音列表
+    function loadVoices() {
+      voices = window.speechSynthesis.getVoices();
+      
+      // 清空选择器
+      voiceSelect.innerHTML = '<option value="">默认声音</option>';
+      
+      // 过滤中文声音
+      const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+      
+      if (zhVoices.length === 0) {
+        return;
+      }
+      
+      // 添加声音选项
+      zhVoices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = voice.name;
+        option.textContent = voice.name + (voice.localService ? ' (本地)' : ' (云端)');
+        voiceSelect.appendChild(option);
+      });
+      
+      // 尝试恢复之前选择的声音，如果没有则使用默认声音
+      const savedVoice = localStorage.getItem('ttsVoice');
+      if (savedVoice) {
+        voiceSelect.value = savedVoice;
+        currentVoice = voices.find(v => v.name === savedVoice);
+      } else {
+        // 查找默认声音
+        const defaultVoice = voices.find(v => v.name.includes('Yunjian') || v.name.includes('云健'));
+        if (defaultVoice) {
+          voiceSelect.value = defaultVoice.name;
+          currentVoice = defaultVoice;
+          localStorage.setItem('ttsVoice', defaultVoice.name);
+        }
+      }
+      
+      // 恢复语速设置
+      const savedRate = localStorage.getItem('ttsRate');
+      if (savedRate) {
+        rateSelect.value = savedRate;
+        currentRate = parseFloat(savedRate);
+      }
+    }
+
+    // 声音列表加载事件
+    if (window.speechSynthesis) {
+      // Chrome 需要等待 voiceschanged 事件
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      // 立即尝试加载（Firefox 等浏览器）
+      loadVoices();
+    }
+
+    // 切换声音
+    voiceSelect.addEventListener('change', () => {
+      const selectedName = voiceSelect.value;
+      if (selectedName) {
+        currentVoice = voices.find(v => v.name === selectedName);
+        localStorage.setItem('ttsVoice', selectedName);
+        showToast('已切换到: ' + selectedName, 'success');
+      } else {
+        currentVoice = null;
+        localStorage.removeItem('ttsVoice');
+      }
+      
+      // 如果正在朗读，重新开始以应用新声音
+      if (isPlaying) {
+        window.speechSynthesis.cancel();
+        ttsBtn.click();
+      }
+    });
+    
+    // 切换语速
+    rateSelect.addEventListener('change', () => {
+      currentRate = parseFloat(rateSelect.value);
+      localStorage.setItem('ttsRate', rateSelect.value);
+      showToast('语速已设置为: ' + rateSelect.value + 'x', 'success');
+      
+      // 如果正在朗读，重新开始以应用新语速
+      if (isPlaying) {
+        window.speechSynthesis.cancel();
+        ttsBtn.click();
+      }
+    });
+
+    // 构建朗读文本（优先朗读AI分析）
+    function buildSpeechText() {
+      const title = document.querySelector('.article-title')?.textContent?.trim() || '';
+      const content = document.querySelector('.content')?.textContent?.trim() || '';
+      const aiScore = document.querySelector('.ai-box .ai-score')?.textContent?.trim() || '';
+      const aiReason = document.querySelector('.ai-box .ai-reason')?.textContent?.trim() || '';
+      
+      let text = '';
+      
+      // 优先朗读AI分析
+      if (aiScore || aiReason) {
+        text += 'AI分析。';
+        if (aiScore) {
+          text += '影响评分：' + aiScore + '。';
+        }
+        if (aiReason) {
+          text += '分析理由：' + aiReason + '。';
+        }
+      }
+      
+      // 然后朗读标题
+      if (title) {
+        text += '标题：' + title + '。';
+      }
+      
+      // 最后正文
+      if (content) {
+        text += '正文：' + content.substring(0, 2000); // 限制长度避免过长
+      }
+      
+      return text || title;
+    }
+
+    ttsBtn.addEventListener('click', () => {
+      if (!window.speechSynthesis) {
+        showToast('您的浏览器不支持语音朗读功能', 'error');
+        return;
+      }
+
+      if (isPlaying) {
+        // 停止朗读
+        window.speechSynthesis.cancel();
+        isPlaying = false;
+        ttsBtn.classList.remove('playing');
+        ttsIcon.textContent = '🔊';
+        ttsText.textContent = '朗读';
+      } else {
+        // 开始朗读
+        const text = buildSpeechText();
+        if (!text) {
+          showToast('没有可朗读的内容', 'error');
+          return;
+        }
+
+        utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = currentRate;
+        
+        // 应用选择的声音
+        if (currentVoice) {
+          utterance.voice = currentVoice;
+        }
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => {
+          isPlaying = true;
+          ttsBtn.classList.add('playing');
+          ttsIcon.textContent = '⏸';
+          ttsText.textContent = '停止';
+        };
+
+        utterance.onend = () => {
+          isPlaying = false;
+          ttsBtn.classList.remove('playing');
+          ttsIcon.textContent = '🔊';
+          ttsText.textContent = '朗读';
+        };
+
+        utterance.onerror = (e) => {
+          console.error('朗读错误:', e);
+          isPlaying = false;
+          ttsBtn.classList.remove('playing');
+          ttsIcon.textContent = '🔊';
+          ttsText.textContent = '朗读';
+          showToast('朗读出错，请重试', 'error');
+        };
+
+        window.speechSynthesis.speak(utterance);
+      }
+    });
+
+    // 页面卸载时停止朗读
+    window.addEventListener('beforeunload', () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - FinNews Monitor</title>
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-light: #e8f0fe;
+      --danger: #e02424;
+      --danger-light: #fde8e8;
+      --success: #057a55;
+      --success-light: #def7ec;
+      --warning: #c27803;
+      --warning-light: #fdf6b2;
+      --neutral: #6b7280;
+      --neutral-light: #f3f4f6;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --text-secondary: #6b7280;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Layout */
+    .app-layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #1e293b; color: #cbd5e1; display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; }
+    .sidebar-logo { padding: 20px 24px; border-bottom: 1px solid #334155; }
+    .sidebar-logo h1 { font-size: 18px; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 8px; }
+    .sidebar-logo p { font-size: 12px; color: #64748b; margin-top: 4px; }
+    .sidebar-nav { padding: 12px 0; flex: 1; }
+    .nav-section { padding: 8px 16px; font-size: 11px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 24px; color: #94a3b8; text-decoration: none; font-size: 14px; transition: all 0.15s; }
+    .nav-item:hover { background: #334155; color: #f1f5f9; }
+    .nav-item.active { background: #1e40af; color: #ffffff; font-weight: 500; }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-status { padding: 16px 24px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 6px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Main */
+    .main-content { margin-left: 240px; flex: 1; display: flex; flex-direction: column; }
+    .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-size: 20px; font-weight: 600; color: var(--text); }
+    .topbar-actions { display: flex; gap: 10px; }
+    .page-content { padding: 24px 32px; flex: 1; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; text-decoration: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #1447e6; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #046a49; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #c81e1e; }
+    .btn-secondary { background: var(--neutral-light); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #e5e7eb; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-ghost:hover { background: var(--primary-light); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Cards */
+    .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .card-header h2 { font-size: 16px; font-weight: 600; color: var(--text); }
+    .card-body { padding: 20px; }
+
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+    .stat-card .stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
+    .stat-card .stat-value { font-size: 32px; font-weight: 700; line-height: 1; }
+    .stat-card .stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+    .stat-primary .stat-value { color: var(--primary); }
+    .stat-success .stat-value { color: var(--success); }
+    .stat-danger .stat-value { color: var(--danger); }
+    .stat-warning .stat-value { color: var(--warning); }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; background: #f9fafb; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 100px; font-size: 12px; font-weight: 500; }
+    .badge-red { background: var(--danger-light); color: var(--danger); }
+    .badge-green { background: var(--success-light); color: var(--success); }
+    .badge-gray { background: var(--neutral-light); color: var(--neutral); }
+    .badge-blue { background: var(--primary-light); color: var(--primary); }
+    .badge-yellow { background: var(--warning-light); color: var(--warning); }
+
+    /* Tags */
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; background: var(--primary-light); color: var(--primary); }
+    .tag-gray { background: var(--neutral-light); color: var(--neutral); }
+
+    /* Forms */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: var(--text); }
+    .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; color: var(--text); background: white; transition: border-color 0.15s; }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+    .form-hint { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+
+    /* Alerts */
+    .alert { padding: 12px 16px; border-radius: 6px; font-size: 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .alert-success { background: var(--success-light); color: var(--success); border: 1px solid #a7f3d0; }
+    .alert-error { background: var(--danger-light); color: var(--danger); border: 1px solid #fca5a5; }
+    .alert-info { background: var(--primary-light); color: var(--primary); border: 1px solid #93c5fd; }
+
+    /* Misc */
+    .empty-state { padding: 48px; text-align: center; color: var(--text-secondary); }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .mb-4 { margin-bottom: 16px; }
+    .mb-6 { margin-bottom: 24px; }
+    .text-sm { font-size: 13px; }
+    .text-secondary { color: var(--text-secondary); }
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>📈 FinNews</h1>
+        <p>金融新闻监控助手</p>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">监控</div>
+        <a href="/" class="nav-item <%= currentPage === 'home' ? 'active' : '' %>">
+          <span class="icon">🏠</span> 系统概览
+        </a>
+        <a href="/news" class="nav-item <%= currentPage === 'news' ? 'active' : '' %>">
+          <span class="icon">📰</span> 新闻浏览
+        </a>
+        <div class="nav-section" style="margin-top: 8px;">配置</div>
+        <a href="/portfolio" class="nav-item <%= currentPage === 'portfolio' ? 'active' : '' %>">
+          <span class="icon">💼</span> 持仓管理
+        </a>
+        <a href="/settings" class="nav-item <%= currentPage === 'settings' ? 'active' : '' %>">
+          <span class="icon">⚙️</span> 系统设置
+        </a>
+      </nav>
+      <div class="sidebar-status">
+        <span class="status-dot"></span> 服务运行中
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="topbar">
+        <span class="topbar-title"><%= title %></span>
+        <div class="topbar-actions">
+          <%- typeof topbarActions !== 'undefined' ? topbarActions : '' %>
+        </div>
+      </div>
+      <div class="page-content">
+        <%- body %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

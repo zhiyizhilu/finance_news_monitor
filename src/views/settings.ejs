@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统设置 - FinNews Monitor</title>
+  <style>
+    :root {
+      --primary:#1a56db; --primary-light:#ebf5ff;
+      --danger:#e02424; --danger-light:#fde8e8;
+      --success:#057a55; --success-light:#def7ec;
+      --warning:#c27803; --warning-light:#fdf6b2;
+      --neutral:#6b7280; --neutral-light:#f3f4f6;
+      --bg:#f1f5f9; --card:#fff; --border:#e5e7eb;
+      --text:#111827; --text-2:#6b7280;
+      --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+    .sidebar { width:220px; background:#0f172a; color:#cbd5e1; display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:100; }
+    .logo { padding:20px 20px 16px; border-bottom:1px solid #1e293b; }
+    .logo-title { font-size:18px; font-weight:700; color:#f1f5f9; }
+    .logo-sub { font-size:11px; color:#475569; margin-top:3px; }
+    .nav { padding:12px 0; flex:1; }
+    .nav-label { padding:8px 16px; font-size:10px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.08em; }
+    .nav-a { display:flex; align-items:center; gap:10px; padding:9px 20px; color:#94a3b8; text-decoration:none; font-size:13.5px; transition:all .15s; }
+    .nav-a:hover { background:#1e293b; color:#e2e8f0; }
+    .nav-a.active { background:#1d4ed8; color:#fff; font-weight:500; }
+    .nav-a .ico { font-size:15px; width:18px; text-align:center; }
+    .sidebar-footer { padding:14px 20px; border-top:1px solid #1e293b; font-size:12px; color:#475569; display:flex; align-items:center; gap:6px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .main { margin-left:220px; flex:1; display:flex; flex-direction:column; }
+    .topbar { background:var(--card); border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+    .topbar h1 { font-size:18px; font-weight:600; }
+    .page { padding:24px 28px; max-width:760px; }
+    .btn { display:inline-flex; align-items:center; gap:5px; padding:9px 18px; border:none; border-radius:6px; cursor:pointer; font-size:13.5px; font-weight:500; transition:all .15s; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-primary:hover { background:#1447e6; }
+    .btn-success { background:#059669; color:#fff; }
+    .btn-success:hover { background:#047857; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); margin-bottom:20px; }
+    .card-head { padding:14px 20px; border-bottom:1px solid var(--border); }
+    .card-head h2 { font-size:15px; font-weight:600; }
+    .card-head p { font-size:12px; color:var(--text-2); margin-top:3px; }
+    .form-padding { padding:20px; }
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block; margin-bottom:5px; font-size:13px; font-weight:500; }
+    .form-control { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13.5px; transition:border-color .15s; }
+    .form-control:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(26,86,219,.1); }
+    select.form-control { background:#fff; }
+    .form-hint { font-size:11.5px; color:var(--text-2); margin-top:4px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .checkbox-row { display:flex; align-items:center; gap:8px; font-size:13.5px; }
+    .alert { padding:12px 16px; border-radius:6px; font-size:13.5px; margin-bottom:16px; }
+    .alert-success { background:var(--success-light); color:var(--success); border:1px solid #a7f3d0; }
+    .alert-error { background:var(--danger-light); color:var(--danger); border:1px solid #fca5a5; }
+    .actions-row { display:flex; gap:12px; align-items:center; padding:16px 20px; border-top:1px solid var(--border); background:#f9fafb; border-radius:0 0 8px 8px; }
+    a { color:var(--primary); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">📈 FinNews</div>
+      <div class="logo-sub">金融新闻监控助手</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">监控</div>
+      <a href="/" class="nav-a"><span class="ico">🏠</span> 系统概览</a>
+      <a href="/news" class="nav-a"><span class="ico">📰</span> 新闻浏览</a>
+      <div class="nav-label" style="margin-top:4px">配置</div>
+      <a href="/portfolio" class="nav-a"><span class="ico">💼</span> 持仓管理</a>
+      <a href="/settings" class="nav-a active"><span class="ico">⚙️</span> 系统设置</a>
+    </nav>
+    <div class="sidebar-footer"><span class="dot"></span> 服务运行中</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><h1>⚙️ 系统设置</h1></div>
+    <div class="page">
+
+      <% if (locals.saved) { %>
+        <div class="alert alert-success">✅ 设置已保存</div>
+      <% } %>
+      <% if (locals.error) { %>
+        <div class="alert alert-error">❌ <%= error %></div>
+      <% } %>
+
+      <form action="/settings/save" method="POST">
+
+        <!-- Email -->
+        <div class="card">
+          <div class="card-head">
+            <h2>📧 邮件配置</h2>
+            <p>用于发送新闻提醒，支持 QQ邮箱 / 163邮箱等 SMTP 服务</p>
+          </div>
+          <div class="form-padding">
+            <div class="form-row">
+              <div class="form-group">
+                <label>SMTP 服务器</label>
+                <input type="text" name="smtpHost" class="form-control" value="<%= settings.smtpHost || 'smtp.qq.com' %>" placeholder="smtp.qq.com">
+              </div>
+              <div class="form-group">
+                <label>SMTP 端口</label>
+                <input type="number" name="smtpPort" class="form-control" value="<%= settings.smtpPort || '465' %>" placeholder="465">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-row">
+                <input type="checkbox" name="smtpSecure" <%= settings.smtpSecure === 'true' ? 'checked' : '' %>> 使用 SSL/TLS 加密
+              </label>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>邮箱账号</label>
+                <input type="text" name="smtpUser" class="form-control" value="<%= settings.smtpUser || '' %>" placeholder="your@qq.com">
+              </div>
+              <div class="form-group">
+                <label>SMTP 授权码</label>
+                <input type="password" name="smtpPass" class="form-control" value="<%= settings.smtpPass || '' %>" placeholder="非登录密码，是授权码">
+                <div class="form-hint">QQ邮箱：设置 → 账户 → 开启SMTP服务，获取16位授权码</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>通知接收邮箱</label>
+              <input type="email" name="notifyEmail" class="form-control" value="<%= settings.notifyEmail || '' %>" placeholder="接收新闻提醒的邮箱地址">
+            </div>
+          </div>
+          <div class="actions-row">
+            <button type="button" class="btn btn-success" id="btnTestEmail" onclick="testEmail()">🧪 发送测试邮件</button>
+            <span id="emailStatus" style="font-size:13px;color:#6b7280"></span>
+          </div>
+        </div>
+
+        <!-- AI -->
+        <div class="card">
+          <div class="card-head">
+            <h2>🤖 AI 分析配置</h2>
+            <p>使用 OpenRouter、Ollama 云端或 OpenCode 本地模型分析新闻对持仓的影响</p>
+          </div>
+          <div class="form-padding">
+            <div class="form-group">
+              <label>AI 服务提供商</label>
+              <select name="aiProvider" class="form-control" id="aiProvider">
+                <option value="opencode" <%= (!settings.aiProvider || settings.aiProvider === 'opencode') ? 'selected' : '' %>>OpenCode 本地（免费，推荐）</option>
+                <option value="openrouter" <%= settings.aiProvider === 'openrouter' ? 'selected' : '' %>>OpenRouter（多模型）</option>
+                <option value="ollama" <%= settings.aiProvider === 'ollama' ? 'selected' : '' %>>Ollama 云端</option>
+              </select>
+            </div>
+            
+            <!-- OpenRouter 配置 -->
+            <div id="openrouterConfig" style="display:none">
+              <div class="form-group">
+                <label>OpenRouter API Key</label>
+                <input type="password" name="openRouterApiKey" class="form-control" value="<%= settings.openRouterApiKey || '' %>" placeholder="sk-or-v1-...">
+                <div class="form-hint">免费注册获取：<a href="https://openrouter.ai/" target="_blank">https://openrouter.ai/</a> → Settings → API Keys</div>
+              </div>
+            </div>
+            
+            <!-- Ollama 配置 -->
+            <div id="ollamaConfig" style="display:none">
+              <div class="form-group">
+                <label>Ollama API Key</label>
+                <input type="password" name="ollamaApiKey" class="form-control" value="<%= settings.ollamaApiKey || '' %>" placeholder="ollama-api-key">
+                <div class="form-hint">从 Ollama 云端控制台获取 API Key</div>
+              </div>
+              <div class="form-group">
+                <label>Ollama API 地址</label>
+                <input type="text" name="ollamaUrl" class="form-control" value="<%= settings.ollamaUrl || 'https://ollama.com' %>" placeholder="https://ollama.com">
+                <div class="form-hint">云端默认：https://ollama.com（勿加 /api 后缀，代码自动补全）</div>
+              </div>
+            </div>
+            
+            <!-- OpenCode 配置 -->
+            <div id="opencodeConfig">
+              <div class="form-group">
+                <label>OpenCode CLI 路径（可选）</label>
+                <input type="text" name="opencodeCliPath" class="form-control" value="<%= settings.opencodeCliPath || '' %>" placeholder="自动检测">
+                <div class="form-hint">留空自动检测。如需手动指定，填写 opencode 可执行文件路径（如 C:\Users\xxx\.opencode\bin\opencode.exe）</div>
+              </div>
+              <div class="form-hint" style="background:#f0fdf4;border:1px solid #bbf7d0;padding:10px 12px;border-radius:6px;color:#166534;margin-top:8px;">
+                💡 <strong>OpenCode 本地模式优势：</strong><br>
+                • 完全免费，无 API 调用限制<br>
+                • 不受网络限流（429）影响<br>
+                • 需要先安装 OpenCode CLI：<code>npm install -g opencode-ai</code>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>AI 分析模型</label>
+              <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <select name="aiModelSelect" class="form-control" id="aiModelSelect" style="flex:1;" onchange="onModelSelectChange(this.value)">
+                  <!-- OpenRouter 模型 - 动态加载 -->
+                  <optgroup label="OpenRouter 免费模型" data-provider="openrouter" id="openrouterFreeModels">
+                    <option value="loading">点击加载模型列表...</option>
+                  </optgroup>
+                  <!-- OpenRouter 自定义模型 -->
+                  <optgroup label="自定义模型" data-provider="openrouter" id="openrouterCustomModels">
+                    <option value="__custom__">+ 添加自定义模型...</option>
+                  </optgroup>
+                  <!-- Ollama 模型 -->
+                  <optgroup label="Ollama 云端模型" data-provider="ollama">
+                    <option value="kimi-k2.5:cloud" <%= settings.aiModel === 'kimi-k2.5:cloud' ? 'selected' : '' %>>Kimi K2.5 Cloud</option>
+                  </optgroup>
+                  <!-- Ollama 自定义模型 -->
+                  <optgroup label="自定义模型" data-provider="ollama" id="ollamaCustomModels">
+                    <option value="__custom__">+ 添加自定义模型...</option>
+                  </optgroup>
+                  <!-- OpenCode 模型 - 动态加载 -->
+                  <optgroup label="Free Models" data-provider="opencode" id="opencodeFreeModels">
+                    <option value="auto" <%= settings.aiModel === 'auto' ? 'selected' : '' %>>自动选择（推荐）</option>
+                  </optgroup>
+                  <optgroup label="opencode" data-provider="opencode" id="opencodeOtherModels">
+                  </optgroup>
+                  <!-- OpenCode 自定义模型 -->
+                  <optgroup label="自定义模型" data-provider="opencode" id="opencodeCustomModels">
+                    <option value="__custom__">+ 添加自定义模型...</option>
+                  </optgroup>
+                </select>
+              </div>
+              <!-- 自定义模型输入框 -->
+              <div id="customModelInput" style="display:none;">
+                <input type="text" id="customModelName" class="form-control" placeholder="输入模型名称，如: gpt-4o-mini" style="margin-bottom:8px;">
+                <div style="display:flex;gap:8px;">
+                  <button type="button" class="btn btn-primary" onclick="addCustomModel()" style="padding:6px 12px;font-size:12px;">确认添加</button>
+                  <button type="button" class="btn" onclick="cancelCustomModel()" style="padding:6px 12px;font-size:12px;background:#f3f4f6;color:#6b7280;">取消</button>
+                </div>
+              </div>
+              <!-- 自定义模型管理区域 -->
+              <div id="customModelsManager" style="margin-top:10px;display:none;">
+                <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">已添加的自定义模型：</div>
+                <div id="customModelsList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+              </div>
+              <!-- 隐藏的模型输入框，用于表单提交 -->
+              <input type="hidden" name="aiModel" id="aiModel" value="<%= settings.aiModel || 'opencode/big-pickle' %>">
+              <div class="form-hint">测试前请先保存设置，确保 API Key 和模型已生效</div>
+            </div>
+          </div>
+          <div class="actions-row" style="justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <button type="button" class="btn btn-success" id="btnTestAI" onclick="testAI()">🔌 测试 AI 连通性</button>
+            <div id="aiTestResult" style="flex:1;min-width:200px;font-size:13px;padding:4px 0;word-break:break-all;"></div>
+          </div>
+        </div>
+        
+        <script>
+          // 缓存的 OpenCode 模型列表
+          let cachedOpenCodeModels = [];
+          let opencodeModelsLoaded = false;
+          const savedOpenCodeModel = "<%= settings.aiModel || '' %>";
+          
+          async function loadOpenCodeModels() {
+            if (opencodeModelsLoaded) return; // 已经加载过，不再重复加载
+            
+            const freeGroup = document.getElementById('opencodeFreeModels');
+            const otherGroup = document.getElementById('opencodeOtherModels');
+            if (!freeGroup || !otherGroup) return;
+            
+            // 保留自动选择选项，显示加载中
+            freeGroup.innerHTML = '<option value="auto" ' + (savedOpenCodeModel === 'auto' ? 'selected' : '') + '>自动选择（推荐）</option><option value="" disabled>正在加载模型列表...</option>';
+            otherGroup.innerHTML = '';
+            
+            try {
+              const res = await fetch('/settings/opencode-models');
+              const data = await res.json();
+              
+              if (data.success && Array.isArray(data.models) && data.models.length > 0) {
+                cachedOpenCodeModels = data.models;
+              } else {
+                // 使用默认列表
+                cachedOpenCodeModels = [
+                  'opencode/mimo-v2-omni-free',
+                  'opencode/mimo-v2-pro-free',
+                  'opencode/minimax-m2.5-free',
+                  'opencode/nemotron-3-super-free',
+                  'opencode/big-pickle',
+                  'opencode/gpt-5-nano'
+                ];
+              }
+            } catch (e) {
+              console.error('加载 OpenCode 模型失败:', e);
+              // 使用默认列表
+              cachedOpenCodeModels = [
+                'opencode/mimo-v2-omni-free',
+                'opencode/mimo-v2-pro-free',
+                'opencode/minimax-m2.5-free',
+                'opencode/nemotron-3-super-free',
+                'opencode/big-pickle',
+                'opencode/gpt-5-nano'
+              ];
+            }
+            
+            renderOpenCodeModels();
+            opencodeModelsLoaded = true;
+          }
+          
+          function renderOpenCodeModels() {
+            const freeGroup = document.getElementById('opencodeFreeModels');
+            const otherGroup = document.getElementById('opencodeOtherModels');
+            if (!freeGroup || !otherGroup) return;
+            
+            // 分离免费模型和其他模型
+            const freeModels = cachedOpenCodeModels.filter(m => m.includes('-free'));
+            const otherModels = cachedOpenCodeModels.filter(m => !m.includes('-free') && m.startsWith('opencode/'));
+            
+            // 渲染 Free Models 分组（保留自动选择）
+            let freeHtml = '<option value="auto" ' + (savedOpenCodeModel === 'auto' ? 'selected' : '') + '>自动选择（推荐）</option>';
+            freeModels.forEach(model => {
+              const selected = savedOpenCodeModel === model ? 'selected' : '';
+              const displayName = model.replace('opencode/', '');
+              freeHtml += '<option value="' + model + '" ' + selected + '>' + displayName + '</option>';
+            });
+            freeGroup.innerHTML = freeHtml;
+            
+            // 渲染 opencode 其他模型分组
+            let otherHtml = '';
+            otherModels.forEach(model => {
+              const selected = savedOpenCodeModel === model ? 'selected' : '';
+              const displayName = model.replace('opencode/', '');
+              otherHtml += '<option value="' + model + '" ' + selected + '>' + displayName + '</option>';
+            });
+            otherGroup.innerHTML = otherHtml;
+          }
+          
+          // 缓存的 OpenRouter 模型列表
+          let cachedOpenRouterModels = [];
+          let openrouterModelsLoaded = false;
+          const savedOpenRouterModel = "<%= settings.aiModel || '' %>";
+          
+          async function loadOpenRouterModels() {
+            if (openrouterModelsLoaded) return; // 已经加载过，不再重复加载
+            
+            const group = document.getElementById('openrouterFreeModels');
+            if (!group) return;
+            
+            // 显示加载中
+            group.innerHTML = '<option value="" disabled>正在加载模型列表...</option>';
+            
+            try {
+              const res = await fetch('/settings/openrouter-models');
+              const data = await res.json();
+              
+              if (data.success && Array.isArray(data.models) && data.models.length > 0) {
+                cachedOpenRouterModels = data.models;
+              } else {
+                // 使用默认列表
+                cachedOpenRouterModels = [
+                  { id: 'deepseek/deepseek-chat:free', name: 'deepseek/deepseek-chat:free' },
+                  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'meta-llama/llama-3.3-70b-instruct:free' },
+                  { id: 'nvidia/llama-3.1-nemotron-70b-instruct:free', name: 'nvidia/llama-3.1-nemotron-70b-instruct:free' },
+                  { id: 'qwen/qwen-2.5-72b-instruct:free', name: 'qwen/qwen-2.5-72b-instruct:free' }
+                ];
+              }
+            } catch (e) {
+              console.error('加载 OpenRouter 模型失败:', e);
+              // 使用默认列表
+              cachedOpenRouterModels = [
+                { id: 'deepseek/deepseek-chat:free', name: 'deepseek/deepseek-chat:free' },
+                { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'meta-llama/llama-3.3-70b-instruct:free' },
+                { id: 'nvidia/llama-3.1-nemotron-70b-instruct:free', name: 'nvidia/llama-3.1-nemotron-70b-instruct:free' },
+                { id: 'qwen/qwen-2.5-72b-instruct:free', name: 'qwen/qwen-2.5-72b-instruct:free' }
+              ];
+            }
+            
+            renderOpenRouterModels();
+            openrouterModelsLoaded = true;
+          }
+          
+          function renderOpenRouterModels() {
+            const group = document.getElementById('openrouterFreeModels');
+            if (!group) return;
+            
+            let html = '';
+            cachedOpenRouterModels.forEach(model => {
+              const selected = savedOpenRouterModel === model.id ? 'selected' : '';
+              // 显示原始模型名称（不包含中文）
+              html += '<option value="' + model.id + '" ' + selected + '>' + model.id + '</option>';
+            });
+            group.innerHTML = html;
+          }
+          
+          // 各提供商的默认模型
+          const defaultModels = {
+            'openrouter': 'deepseek/deepseek-chat:free',
+            'ollama': 'kimi-k2.5:cloud',
+            'opencode': 'opencode/big-pickle'
+          };
+          
+          function updateModelOptions() {
+            const provider = document.getElementById('aiProvider').value;
+            const modelSelect = document.getElementById('aiModelSelect');
+            const optgroups = modelSelect.querySelectorAll('optgroup');
+            
+            // 显示/隐藏对应的模型分组
+            optgroups.forEach(group => {
+              const groupProvider = group.getAttribute('data-provider');
+              if (groupProvider === provider) {
+                group.style.display = '';
+              } else {
+                group.style.display = 'none';
+              }
+            });
+            
+            // 切换到当前提供商的默认模型
+            const defaultModel = defaultModels[provider];
+            if (defaultModel) {
+              // 查找并选中默认模型
+              const options = modelSelect.querySelectorAll('option');
+              let found = false;
+              options.forEach(option => {
+                if (option.value === defaultModel && option.parentElement.style.display !== 'none') {
+                  option.selected = true;
+                  found = true;
+                } else {
+                  option.selected = false;
+                }
+              });
+              // 如果没找到默认模型，选择第一个可见的选项
+              if (!found) {
+                const visibleGroup = modelSelect.querySelector('optgroup[style=""]') || modelSelect.querySelector('optgroup:not([style*="none"])');
+                if (visibleGroup) {
+                  const firstOption = visibleGroup.querySelector('option');
+                  if (firstOption) firstOption.selected = true;
+                }
+              }
+              // 更新隐藏输入框
+              const selectedOption = modelSelect.querySelector('option:checked');
+              if (selectedOption) {
+                document.getElementById('aiModel').value = selectedOption.value;
+              }
+            }
+          }
+          
+          document.getElementById('aiProvider').addEventListener('change', function() {
+            const provider = this.value;
+            document.getElementById('openrouterConfig').style.display = provider === 'openrouter' ? 'block' : 'none';
+            document.getElementById('ollamaConfig').style.display = provider === 'ollama' ? 'block' : 'none';
+            document.getElementById('opencodeConfig').style.display = provider === 'opencode' ? 'block' : 'none';
+            updateModelOptions();
+            updateCustomModelsList();
+            
+            // 选择 OpenCode 时自动检测 CLI 路径
+            if (provider === 'opencode') {
+              detectOpenCodeCli();
+            }
+          });
+          
+          // 点击模型下拉框时，如果是 OpenCode/OpenRouter 且未加载过模型，则加载
+          document.getElementById('aiModelSelect').addEventListener('mousedown', function() {
+            const provider = document.getElementById('aiProvider').value;
+            if (provider === 'opencode' && !opencodeModelsLoaded) {
+              loadOpenCodeModels();
+            } else if (provider === 'openrouter' && !openrouterModelsLoaded) {
+              loadOpenRouterModels();
+            }
+          });
+          
+          // 自动检测 OpenCode CLI 路径
+          async function detectOpenCodeCli() {
+            const pathInput = document.querySelector('input[name="opencodeCliPath"]');
+            // 如果已经有值且不是"自动检测"，则不覆盖
+            if (pathInput.value && pathInput.value !== '自动检测' && pathInput.placeholder !== '自动检测') {
+              return;
+            }
+            
+            try {
+              const res = await fetch('/settings/detect-opencode');
+              const result = await res.json();
+              
+              if (result.found) {
+                pathInput.value = result.path;
+                // 显示检测成功提示
+                const hint = pathInput.parentElement.querySelector('.form-hint');
+                if (hint) {
+                  hint.innerHTML = '<span style="color:#057a55;">✓ ' + result.message + '</span>';
+                }
+              } else {
+                // 未检测到，保持placeholder
+                pathInput.placeholder = '自动检测';
+                const hint = pathInput.parentElement.querySelector('.form-hint');
+                if (hint) {
+                  hint.innerHTML = '<span style="color:#f59e0b;">⚠ ' + result.message + '</span>';
+                }
+              }
+            } catch (e) {
+              console.error('检测 OpenCode 失败:', e);
+            }
+          }
+          
+          // 自定义模型相关函数
+          function onModelSelectChange(value) {
+            if (value === '__custom__') {
+              document.getElementById('customModelInput').style.display = 'block';
+              document.getElementById('aiModelSelect').style.display = 'none';
+            } else {
+              document.getElementById('aiModel').value = value;
+            }
+          }
+          
+          // 存储自定义模型（按提供商分类）
+          const customModels = {
+            openrouter: [],
+            ollama: [],
+            opencode: []
+          };
+          
+          function addCustomModel() {
+            const customName = document.getElementById('customModelName').value.trim();
+            if (!customName) {
+              alert('请输入模型名称');
+              return;
+            }
+            
+            // 获取当前提供商
+            const provider = document.getElementById('aiProvider').value;
+            
+            // 检查是否已存在
+            if (customModels[provider].includes(customName)) {
+              alert('该模型已存在');
+              return;
+            }
+            
+            // 添加到存储
+            customModels[provider].push(customName);
+            
+            // 添加到当前提供商的自定义分组
+            let customGroupId = '';
+            if (provider === 'openrouter') {
+              customGroupId = 'openrouterCustomModels';
+            } else if (provider === 'ollama') {
+              customGroupId = 'ollamaCustomModels';
+            } else if (provider === 'opencode') {
+              customGroupId = 'opencodeCustomModels';
+            }
+            
+            const select = document.getElementById('aiModelSelect');
+            const customGroup = select.querySelector('optgroup#' + customGroupId);
+            
+            const option = document.createElement('option');
+            option.value = customName;
+            option.textContent = customName;
+            option.selected = true;
+            // 插入到 __custom__ 选项之前
+            const customOption = customGroup.querySelector('option[value="__custom__"]');
+            customGroup.insertBefore(option, customOption);
+            
+            // 更新隐藏输入框
+            document.getElementById('aiModel').value = customName;
+            
+            // 恢复显示
+            document.getElementById('customModelInput').style.display = 'none';
+            document.getElementById('aiModelSelect').style.display = 'block';
+            document.getElementById('aiModelSelect').value = customName;
+            
+            // 清空输入框
+            document.getElementById('customModelName').value = '';
+            
+            // 更新自定义模型列表显示
+            updateCustomModelsList();
+          }
+          
+          function removeCustomModel(modelName) {
+            const provider = document.getElementById('aiProvider').value;
+            
+            // 从存储中移除
+            const index = customModels[provider].indexOf(modelName);
+            if (index > -1) {
+              customModels[provider].splice(index, 1);
+            }
+            
+            // 从下拉框中移除
+            let customGroupId = '';
+            if (provider === 'openrouter') {
+              customGroupId = 'openrouterCustomModels';
+            } else if (provider === 'ollama') {
+              customGroupId = 'ollamaCustomModels';
+            } else if (provider === 'opencode') {
+              customGroupId = 'opencodeCustomModels';
+            }
+            
+            const select = document.getElementById('aiModelSelect');
+            const customGroup = select.querySelector('optgroup#' + customGroupId);
+            const option = customGroup.querySelector('option[value="' + modelName + '"]');
+            if (option) {
+              option.remove();
+            }
+            
+            // 如果删除的是当前选中的模型，重置为默认
+            if (document.getElementById('aiModel').value === modelName) {
+              const defaultModels = {
+                'openrouter': 'deepseek/deepseek-chat:free',
+                'ollama': 'kimi-k2.5:cloud',
+                'opencode': 'auto'
+              };
+              document.getElementById('aiModel').value = defaultModels[provider];
+              select.value = defaultModels[provider];
+            }
+            
+            // 更新列表显示
+            updateCustomModelsList();
+          }
+          
+          function updateCustomModelsList() {
+            const provider = document.getElementById('aiProvider').value;
+            const listContainer = document.getElementById('customModelsList');
+            const manager = document.getElementById('customModelsManager');
+            
+            if (customModels[provider].length === 0) {
+              manager.style.display = 'none';
+              return;
+            }
+            
+            manager.style.display = 'block';
+            listContainer.innerHTML = customModels[provider].map(model => 
+              '<div style="display:flex;align-items:center;gap:4px;padding:4px 8px;background:#f3f4f6;border-radius:4px;font-size:12px;">' +
+              '<span>' + model + '</span>' +
+              '<button type="button" onclick="removeCustomModel(\'' + model + '\')" style="border:none;background:none;color:#ef4444;cursor:pointer;padding:0 2px;font-size:14px;line-height:1;" title="删除">×</button>' +
+              '</div>'
+            ).join('');
+          }
+          
+          function cancelCustomModel() {
+            document.getElementById('customModelInput').style.display = 'none';
+            document.getElementById('aiModelSelect').style.display = 'block';
+            document.getElementById('aiModelSelect').value = document.getElementById('aiModel').value;
+          }
+          
+          // 初始化显示
+          document.getElementById('aiProvider').dispatchEvent(new Event('change'));
+          updateModelOptions();
+          
+          // 加载已保存的自定义模型到对应提供商的分组
+             const savedModel = "<%= settings.aiModel || '' %>";
+             const savedProvider = "<%= settings.aiProvider || 'opencode' %>";
+             const predefinedModels = ['deepseek/deepseek-chat:free', 'qwen/qwen-2.5-72b-instruct:free', 'meta-llama/llama-3.3-70b-instruct:free', 'nvidia/llama-3.1-nemotron-70b-instruct:free', 'kimi-k2.5:cloud', 'auto', '__custom__'];
+             
+             if (savedModel && !predefinedModels.includes(savedModel)) {
+               const select = document.getElementById('aiModelSelect');
+               let customGroupId = '';
+               
+               // 根据已保存的提供商确定分组
+               if (savedProvider === 'openrouter' && !savedModel.startsWith('opencode/')) {
+                 customGroupId = 'openrouterCustomModels';
+               } else if (savedProvider === 'ollama' && !savedModel.startsWith('opencode/')) {
+                 customGroupId = 'ollamaCustomModels';
+               } else if (savedProvider === 'opencode') {
+                 customGroupId = 'opencodeCustomModels';
+               }
+               
+               if (customGroupId) {
+                 const customGroup = select.querySelector('optgroup#' + customGroupId);
+                 const customOption = customGroup.querySelector('option[value="__custom__"]');
+                 const option = document.createElement('option');
+                 option.value = savedModel;
+                 option.textContent = savedModel;
+                 option.selected = true;
+                 customGroup.insertBefore(option, customOption);
+                 
+                 // 添加到 customModels 存储
+                 if (!customModels[savedProvider].includes(savedModel)) {
+                   customModels[savedProvider].push(savedModel);
+                 }
+               }
+             }
+             
+             // 初始化显示自定义模型列表
+             updateCustomModelsList();
+        </script>
+
+        <!-- Schedule -->
+        <div class="card">
+          <div class="card-head">
+            <h2>⏰ 采集与推送配置</h2>
+          </div>
+          <div class="form-padding">
+            <div class="form-row">
+              <div class="form-group">
+                <label>新闻采集间隔（分钟）</label>
+                <input type="number" name="fetchInterval" class="form-control" value="<%= settings.fetchInterval || '30' %>" min="5" max="120">
+                <div class="form-hint">建议 15~60 分钟，避免频率过高被封IP</div>
+              </div>
+              <div class="form-group">
+                <label>定时汇总邮件时间</label>
+                <input type="text" name="scheduledTimes" class="form-control" value="<%= settings.scheduledTimes || '08:00,12:00,18:00' %>" placeholder="08:00,12:00,18:00">
+                <div class="form-hint">用逗号分隔多个时间点（24小时制）</div>
+              </div>
+            </div>
+          </div>
+          <div class="actions-row">
+            <button type="submit" class="btn btn-primary">💾 保存所有设置</button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script>
+    async function testAI() {
+      const btn = document.getElementById('btnTestAI');
+      const result = document.getElementById('aiTestResult');
+      btn.disabled = true;
+      btn.textContent = '测试中…';
+      result.textContent = '正在连接，请稍候（最长20秒）…';
+      result.style.color = '#6b7280';
+      try {
+        // 获取当前页面的设置值
+        const provider = document.getElementById('aiProvider').value;
+        const model = document.getElementById('aiModel').value || document.getElementById('aiModelSelect').value;
+        const openRouterApiKey = document.querySelector('input[name="openRouterApiKey"]')?.value || '';
+        const ollamaApiKey = document.querySelector('input[name="ollamaApiKey"]')?.value || '';
+        const ollamaUrl = document.querySelector('input[name="ollamaUrl"]')?.value || 'https://ollama.com';
+        const opencodeCliPath = document.querySelector('input[name="opencodeCliPath"]')?.value || '';
+        
+        const res = await fetch('/settings/test-ai', { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            aiProvider: provider,
+            aiModel: model,
+            openRouterApiKey,
+            ollamaApiKey,
+            ollamaUrl,
+            opencodeCliPath
+          })
+        });
+        const d = await res.json();
+        result.textContent = d.message;
+        result.style.color = d.success ? '#057a55' : '#e02424';
+      } catch(e) {
+        result.textContent = '请求失败，请检查服务是否正常运行';
+        result.style.color = '#e02424';
+      }
+      btn.disabled = false;
+      btn.textContent = '🔌 测试 AI 连通性';
+    }
+
+    async function testEmail() {
+      const btn = document.getElementById('btnTestEmail');
+      const status = document.getElementById('emailStatus');
+      btn.disabled = true; btn.textContent = '发送中…';
+      status.textContent = '';
+      try {
+        const res = await fetch('/settings/test-email', { method: 'POST' });
+        const d = await res.json();
+        status.textContent = d.message;
+        status.style.color = d.success ? '#057a55' : '#e02424';
+      } catch(e) {
+        status.textContent = '请求失败，请检查网络';
+        status.style.color = '#e02424';
+      }
+      btn.disabled = false; btn.textContent = '🧪 发送测试邮件';
+    }
+  </script>
+</body>
+</html>

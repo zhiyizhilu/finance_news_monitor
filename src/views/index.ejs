@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统概览 - FinNews Monitor</title>
+  <style>
+    :root {
+      --primary: #1a56db; --primary-light: #ebf5ff;
+      --danger: #e02424; --danger-light: #fde8e8;
+      --success: #057a55; --success-light: #def7ec;
+      --warning: #c27803; --warning-light: #fdf6b2;
+      --neutral: #6b7280; --neutral-light: #f3f4f6;
+      --bg: #f1f5f9; --card: #fff; --border: #e5e7eb;
+      --text: #111827; --text-2: #6b7280;
+      --shadow: 0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+
+    /* Sidebar */
+    .sidebar { width:220px; background:#0f172a; color:#cbd5e1; display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:100; }
+    .logo { padding:20px 20px 16px; border-bottom:1px solid #1e293b; }
+    .logo-title { font-size:18px; font-weight:700; color:#f1f5f9; }
+    .logo-sub { font-size:11px; color:#475569; margin-top:3px; }
+    .nav { padding:12px 0; flex:1; overflow-y:auto; }
+    .nav-label { padding:8px 16px; font-size:10px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.08em; }
+    .nav-a { display:flex; align-items:center; gap:10px; padding:9px 20px; color:#94a3b8; text-decoration:none; font-size:13.5px; transition:all .15s; }
+    .nav-a:hover { background:#1e293b; color:#e2e8f0; }
+    .nav-a.active { background:#1d4ed8; color:#fff; font-weight:500; }
+    .nav-a .ico { font-size:15px; width:18px; text-align:center; }
+    .sidebar-footer { padding:14px 20px; border-top:1px solid #1e293b; font-size:12px; color:#475569; display:flex; align-items:center; gap:6px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* Main */
+    .main { margin-left:220px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
+    .topbar { background:var(--card); border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 1px 0 var(--border); }
+    .topbar h1 { font-size:18px; font-weight:600; }
+    .page { padding:24px 28px; }
+
+    /* Buttons */
+    .btn { display:inline-flex; align-items:center; gap:5px; padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; transition:all .15s; text-decoration:none; white-space:nowrap; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-primary:hover { background:#1447e6; }
+    .btn-success { background:#059669; color:#fff; }
+    .btn-success:hover { background:#047857; }
+    .btn-sm { padding:5px 10px; font-size:12px; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+
+    /* Stats */
+    .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px; }
+    @media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}}
+    .stat { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:18px; box-shadow:var(--shadow); }
+    .stat-link { text-decoration:none; color:inherit; cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .1s; }
+    .stat-link:hover { border-color:#93c5fd; box-shadow:0 4px 12px rgba(29,78,216,.12); transform:translateY(-1px); }
+    .stat-link:hover .stat-val { text-decoration:underline; }
+    .stat-label { font-size:12px; color:var(--text-2); font-weight:500; margin-bottom:8px; display:flex; align-items:center; gap:5px; }
+    .stat-val { font-size:30px; font-weight:700; line-height:1; }
+    .stat-sub { font-size:11px; color:var(--text-2); margin-top:5px; }
+    .v-blue { color:var(--primary); }
+    .v-green { color:#059669; }
+    .v-red { color:var(--danger); }
+    .v-yellow { color:var(--warning); }
+
+    /* Card */
+    .card { background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); }
+    .card-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .card-head h2 { font-size:15px; font-weight:600; }
+    .card-body { padding:0; }
+
+    /* Table */
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th { padding:9px 16px; text-align:left; font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; background:#f9fafb; border-bottom:1px solid var(--border); }
+    td { padding:11px 16px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#fafafa; }
+
+    /* Badges */
+    .badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:100px; font-size:11.5px; font-weight:500; }
+    .b-red { background:var(--danger-light); color:var(--danger); }
+    .b-green { background:var(--success-light); color:var(--success); }
+    .b-gray { background:var(--neutral-light); color:var(--neutral); }
+    .b-blue { background:var(--primary-light); color:var(--primary); }
+    .b-yellow { background:var(--warning-light); color:var(--warning); }
+
+    /* Tags */
+    .tag { display:inline-block; padding:2px 7px; border-radius:4px; font-size:11.5px; margin:2px; background:var(--primary-light); color:var(--primary); }
+    .tag-gray { background:var(--neutral-light); color:var(--neutral); }
+
+    /* Grid */
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    @media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+
+    .empty { padding:40px 20px; text-align:center; color:var(--text-2); }
+    .empty .emo { font-size:40px; margin-bottom:10px; }
+    a { color:var(--primary); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+
+    /* 持仓行样式 */
+    .position-row { cursor:pointer; transition:background .15s; }
+    .position-row:hover { background:#f0fdf4; }
+    .position-row.active { background:#dcfce7; }
+    .position-row.active td { background:#dcfce7; }
+    .news-row { transition:opacity .2s; }
+    .news-row.hidden { display:none; }
+    .news-row.dimmed { opacity:.3; }
+    .filter-info { padding:10px 16px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;font-size:13px;color:#166534;display:flex;align-items:center;justify-content:space-between; }
+    .filter-info button { background:#fff;border:1px solid #86efac;border-radius:4px;padding:4px 10px;font-size:12px;color:#166534;cursor:pointer; }
+    .filter-info button:hover { background:#dcfce7; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">📈 FinNews</div>
+      <div class="logo-sub">金融新闻监控助手</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">监控</div>
+      <a href="/" class="nav-a active"><span class="ico">🏠</span> 系统概览</a>
+      <a href="/news" class="nav-a"><span class="ico">📰</span> 新闻浏览</a>
+      <div class="nav-label" style="margin-top:4px">配置</div>
+      <a href="/portfolio" class="nav-a"><span class="ico">💼</span> 持仓管理</a>
+      <a href="/settings" class="nav-a"><span class="ico">⚙️</span> 系统设置</a>
+    </nav>
+    <div class="sidebar-footer"><span class="dot"></span> 服务运行中</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>系统概览</h1>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-success" id="btnFetch" onclick="triggerFetch()">🔄 立即采集</button>
+        <button class="btn btn-primary" id="btnAnalyze" onclick="triggerAnalyze()">🤖 立即分析</button>
+      </div>
+    </div>
+
+    <div class="page">
+      <!-- Stats -->
+      <div class="stats">
+        <a href="/news?filter=all&page=1" class="stat stat-link">
+          <div class="stat-label">📰 总新闻数</div>
+          <div class="stat-val v-blue"><%= stats.totalArticles %></div>
+          <div class="stat-sub">已采集文章</div>
+        </a>
+        <a href="/news?filter=relevant&page=1" class="stat stat-link">
+          <div class="stat-label">🎯 命中持仓</div>
+          <div class="stat-val v-green"><%= stats.relevantArticles %></div>
+          <div class="stat-sub">相关新闻数量</div>
+        </a>
+        <a href="/news?filter=high&page=1" class="stat stat-link">
+          <div class="stat-label">⚡ 高影响</div>
+          <div class="stat-val v-red"><%= stats.highImpactArticles %></div>
+          <div class="stat-sub">AI评分 ≥ 80</div>
+        </a>
+        <div class="stat">
+          <div class="stat-label">📧 已推送</div>
+          <div class="stat-val v-yellow"><%= stats.notifiedArticles %></div>
+          <div class="stat-sub">邮件已发送</div>
+        </div>
+        <a href="/portfolio" class="stat stat-link">
+          <div class="stat-label">💼 持仓数</div>
+          <div class="stat-val v-blue"><%= stats.positionsCount %></div>
+          <div class="stat-sub">监控标的</div>
+        </a>
+      </div>
+
+      <!-- Content grid -->
+      <div class="grid-2">
+        <!-- Recent news -->
+        <div class="card">
+          <div class="card-head">
+            <h2>📋 命中持仓</h2>
+            <a href="/news?filter=portfolio" class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">查看全部 →</a>
+          </div>
+          <div class="card-body">
+            <div id="filterInfo" class="filter-info" style="display:none;">
+              <span>🔍 正在查看：<strong id="filterPositionName"></strong> 的相关新闻</span>
+              <button onclick="clearFilter()">清除筛选</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>标题</th>
+                  <th>来源</th>
+                  <th>影响</th>
+                </tr>
+              </thead>
+              <tbody id="newsTableBody">
+                <% if (recentNews.length === 0) { %>
+                  <tr><td colspan="3"><div class="empty"><div class="emo">📭</div><p>暂无新闻，点击"立即采集"开始</p></div></td></tr>
+                <% } else { %>
+                  <% recentNews.forEach(function(article) { %>
+                    <tr class="news-row" data-keywords="<%= article.keywords ? article.keywords.join(',') : '' %>">
+                      <td style="max-width:220px">
+                        <a href="/news/detail/<%= article.id %>" target="_blank" title="<%= article.title %>">
+                          <%= article.title.length > 36 ? article.title.substring(0, 36) + '…' : article.title %>
+                        </a>
+                        <div style="font-size:11px;color:#9ca3af;margin-top:2px"><%= article.sourceName %></div>
+                      </td>
+                      <td style="white-space:nowrap;color:#6b7280;font-size:12px"><%= new Date(article.publishTime).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) %></td>
+                      <td>
+                        <% if (article.aiImpactScore >= 80) { %>
+                          <span class="badge b-red">⚡高 <%= article.aiImpactScore %></span>
+                        <% } else if (article.aiImpactScore >= 50) { %>
+                          <span class="badge b-green">中 <%= article.aiImpactScore %></span>
+                        <% } else if (article.aiImpactScore > 0) { %>
+                          <span class="badge b-gray">低 <%= article.aiImpactScore %></span>
+                        <% } else { %>
+                          <span class="badge b-gray">待分析</span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Positions -->
+        <div class="card">
+          <div class="card-head">
+            <h2>💼 我的持仓</h2>
+            <a href="/portfolio" class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">管理持仓 →</a>
+          </div>
+          <div class="card-body">
+            <% if (positions.length === 0) { %>
+              <div class="empty">
+                <div class="emo">📋</div>
+                <p>还没有持仓，<a href="/portfolio">去添加</a></p>
+              </div>
+            <% } else { %>
+              <table>
+                <thead>
+                  <tr><th>名称</th><th>类型</th><th>关键词</th></tr>
+                </thead>
+                <tbody>
+                  <% positions.forEach(function(pos) { %>
+                    <% var keys = Array.isArray(pos.keywords) ? pos.keywords : []; %>
+                    <tr class="position-row" data-keywords="<%= keys.join(',') %>" onclick="filterByPosition(this, '<%= pos.name %>')">
+                      <td>
+                        <strong><%= pos.name %></strong>
+                        <div style="font-size:11px;color:#9ca3af"><%= pos.code %></div>
+                      </td>
+                      <td><span class="badge b-blue"><%= pos.market %>/<%= pos.type %></span></td>
+                      <td>
+                        <% keys.slice(0, 3).forEach(function(k) { %>
+                          <span class="tag"><%= k %></span>
+                        <% }); %>
+                        <% if (keys.length > 3) { %><span class="tag tag-gray">+<%= keys.length-3 %></span><% } %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 进度面板 -->
+  <div id="progressOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;">
+    <div style="background:#0f172a;border-radius:12px;width:560px;max-width:92vw;padding:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+      <div style="padding:16px 20px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;">
+        <span id="progressTitle" style="color:#f1f5f9;font-size:15px;font-weight:600;"></span>
+        <span id="progressSpinner" style="color:#38bdf8;font-size:13px;">⏳ 进行中...</span>
+      </div>
+      <div id="progressLog" style="height:300px;overflow-y:auto;padding:14px 18px;font-family:'Courier New',monospace;font-size:12.5px;line-height:1.7;color:#94a3b8;background:#0f172a;white-space:pre-wrap;word-break:break-all;"></div>
+      <div style="padding:12px 20px;border-top:1px solid #1e293b;display:flex;justify-content:space-between;align-items:center;">
+        <span id="progressStatus" style="font-size:12px;color:#64748b;"></span>
+        <button id="progressClose" onclick="closeProgress()" style="display:none;padding:7px 18px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">关闭并刷新</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let progressES = null;
+    let currentFilter = null;
+
+    // 按持仓筛选新闻
+    function filterByPosition(row, positionName) {
+      // 移除其他行的active状态
+      document.querySelectorAll('.position-row').forEach(r => r.classList.remove('active'));
+      
+      // 如果点击的是已选中的行，则清除筛选
+      if (currentFilter === positionName) {
+        clearFilter();
+        return;
+      }
+      
+      // 添加active状态
+      row.classList.add('active');
+      currentFilter = positionName;
+      
+      // 获取该持仓的关键词
+      const positionKeywords = row.dataset.keywords.split(',').filter(k => k.trim());
+      
+      // 显示筛选信息
+      document.getElementById('filterPositionName').textContent = positionName;
+      document.getElementById('filterInfo').style.display = 'flex';
+      
+      // 筛选新闻
+      const newsRows = document.querySelectorAll('.news-row');
+      let visibleCount = 0;
+      
+      newsRows.forEach(newsRow => {
+        const newsKeywords = newsRow.dataset.keywords.split(',').filter(k => k.trim());
+        
+        // 检查是否有匹配的关键词
+        const hasMatch = positionKeywords.some(pk => 
+          newsKeywords.some(nk => nk.toLowerCase().includes(pk.toLowerCase()) || 
+                                  pk.toLowerCase().includes(nk.toLowerCase()))
+        );
+        
+        if (hasMatch) {
+          newsRow.style.display = '';
+          newsRow.classList.remove('dimmed');
+          visibleCount++;
+        } else {
+          newsRow.style.display = 'none';
+        }
+      });
+      
+      // 如果没有匹配的新闻，显示提示
+      if (visibleCount === 0) {
+        const tbody = document.getElementById('newsTableBody');
+        if (!document.getElementById('noMatchRow')) {
+          const noMatchRow = document.createElement('tr');
+          noMatchRow.id = 'noMatchRow';
+          noMatchRow.innerHTML = '<td colspan="3"><div class="empty"><div class="emo">🔍</div><p>没有找到与该持仓相关的新闻</p></div></td>';
+          tbody.appendChild(noMatchRow);
+        }
+      } else {
+        const noMatchRow = document.getElementById('noMatchRow');
+        if (noMatchRow) noMatchRow.remove();
+      }
+    }
+    
+    // 清除筛选
+    function clearFilter() {
+      document.querySelectorAll('.position-row').forEach(r => r.classList.remove('active'));
+      document.getElementById('filterInfo').style.display = 'none';
+      document.getElementById('filterPositionName').textContent = '';
+      currentFilter = null;
+      
+      // 显示所有新闻
+      document.querySelectorAll('.news-row').forEach(row => {
+        row.style.display = '';
+        row.classList.remove('dimmed');
+      });
+      
+      // 移除无匹配提示
+      const noMatchRow = document.getElementById('noMatchRow');
+      if (noMatchRow) noMatchRow.remove();
+    }
+
+    function openProgress(title) {
+      document.getElementById('progressTitle').textContent = title;
+      document.getElementById('progressLog').textContent = '';
+      document.getElementById('progressSpinner').textContent = '⏳ 进行中...';
+      document.getElementById('progressSpinner').style.color = '#38bdf8';
+      document.getElementById('progressStatus').textContent = '';
+      document.getElementById('progressClose').style.display = 'none';
+      document.getElementById('progressOverlay').style.display = 'flex';
+    }
+
+    function appendLog(msg) {
+      const log = document.getElementById('progressLog');
+      // 着色
+      let colored = msg;
+      if (msg.startsWith('  ✓') || msg.includes('新增') || msg.includes('命中') || msg.startsWith('✅')) {
+        colored = `<span style="color:#34d399">${msg}</span>`;
+      } else if (msg.startsWith('  ✗') || msg.includes('失败') || msg.startsWith('__ERROR__')) {
+        colored = `<span style="color:#f87171">${msg}</span>`;
+      } else if (msg.startsWith('[') || msg.startsWith('\n[')) {
+        colored = `<span style="color:#93c5fd">${msg}</span>`;
+      } else if (msg.startsWith('\n📰') || msg.startsWith('\n🤖') || msg.startsWith('🔍')) {
+        colored = `<span style="color:#fbbf24">${msg}</span>`;
+      }
+      log.innerHTML += colored + '\n';
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function closeProgress() {
+      document.getElementById('progressOverlay').style.display = 'none';
+      if (progressES) { progressES.close(); progressES = null; }
+      location.reload();
+    }
+
+    function triggerFetch() {
+      const btn = document.getElementById('btnFetch');
+      btn.disabled = true;
+      btn.innerHTML = '⏳ 采集中…';
+      openProgress('📰 新闻采集进度');
+
+      progressES = new EventSource('/fetch/progress');
+      progressES.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        const msg = data.msg;
+        if (msg.startsWith('__DONE__:')) {
+          const count = msg.split(':')[1];
+          appendLog(`\n✅ 完成！新增 ${count} 篇文章`);
+          document.getElementById('progressSpinner').textContent = '✅ 完成';
+          document.getElementById('progressSpinner').style.color = '#34d399';
+          document.getElementById('progressStatus').textContent = `共新增 ${count} 篇，2秒后自动刷新...`;
+          document.getElementById('progressClose').style.display = 'inline-block';
+          progressES.close(); progressES = null;
+          btn.disabled = false; btn.innerHTML = '🔄 立即采集';
+          setTimeout(closeProgress, 3000);
+        } else if (msg.startsWith('__ERROR__:')) {
+          appendLog(msg.replace('__ERROR__:', '❌ 错误: '));
+          document.getElementById('progressSpinner').textContent = '❌ 出错';
+          document.getElementById('progressSpinner').style.color = '#f87171';
+          document.getElementById('progressClose').style.display = 'inline-block';
+          progressES.close(); progressES = null;
+          btn.disabled = false; btn.innerHTML = '🔄 立即采集';
+        } else {
+          appendLog(msg);
+        }
+      };
+      progressES.onerror = () => {
+        appendLog('❌ 连接中断');
+        document.getElementById('progressSpinner').textContent = '❌ 连接失败';
+        document.getElementById('progressClose').style.display = 'inline-block';
+        progressES.close(); progressES = null;
+        btn.disabled = false; btn.innerHTML = '🔄 立即采集';
+      };
+    }
+
+    function triggerAnalyze() {
+      const btn = document.getElementById('btnAnalyze');
+      btn.disabled = true;
+      btn.innerHTML = '⏳ 分析中…';
+      openProgress('🤖 智能分析进度');
+
+      progressES = new EventSource('/analyze/progress');
+      progressES.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        const msg = data.msg;
+        if (msg === '__DONE__') {
+          appendLog('\n✅ 分析完成！');
+          document.getElementById('progressSpinner').textContent = '✅ 完成';
+          document.getElementById('progressSpinner').style.color = '#34d399';
+          document.getElementById('progressClose').style.display = 'inline-block';
+          progressES.close(); progressES = null;
+          btn.disabled = false; btn.innerHTML = '🤖 立即分析';
+          setTimeout(closeProgress, 3000);
+        } else if (msg.startsWith('__ERROR__:')) {
+          appendLog(msg.replace('__ERROR__:', '❌ 错误: '));
+          document.getElementById('progressSpinner').textContent = '❌ 出错';
+          document.getElementById('progressSpinner').style.color = '#f87171';
+          document.getElementById('progressClose').style.display = 'inline-block';
+          progressES.close(); progressES = null;
+          btn.disabled = false; btn.innerHTML = '🤖 立即分析';
+        } else {
+          appendLog(msg);
+        }
+      };
+      progressES.onerror = () => {
+        appendLog('❌ 连接中断');
+        document.getElementById('progressSpinner').textContent = '❌ 连接失败';
+        document.getElementById('progressClose').style.display = 'inline-block';
+        progressES.close(); progressES = null;
+        btn.disabled = false; btn.innerHTML = '🤖 立即分析';
+      };
+    }
+  </script>
+</body>
+</html>

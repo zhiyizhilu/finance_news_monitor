@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>持仓管理 - FinNews Monitor</title>
+  <style>
+    :root {
+      --primary: #1a56db; --primary-light: #ebf5ff;
+      --danger: #e02424; --danger-light: #fde8e8;
+      --success: #057a55; --success-light: #def7ec;
+      --warning: #c27803; --warning-light: #fdf6b2;
+      --neutral: #6b7280; --neutral-light: #f3f4f6;
+      --bg: #f1f5f9; --card: #fff; --border: #e5e7eb;
+      --text: #111827; --text-2: #6b7280;
+      --shadow: 0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+    .sidebar { width:220px; background:#0f172a; color:#cbd5e1; display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:100; }
+    .logo { padding:20px 20px 16px; border-bottom:1px solid #1e293b; }
+    .logo-title { font-size:18px; font-weight:700; color:#f1f5f9; }
+    .logo-sub { font-size:11px; color:#475569; margin-top:3px; }
+    .nav { padding:12px 0; flex:1; }
+    .nav-label { padding:8px 16px; font-size:10px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.08em; }
+    .nav-a { display:flex; align-items:center; gap:10px; padding:9px 20px; color:#94a3b8; text-decoration:none; font-size:13.5px; transition:all .15s; }
+    .nav-a:hover { background:#1e293b; color:#e2e8f0; }
+    .nav-a.active { background:#1d4ed8; color:#fff; font-weight:500; }
+    .nav-a .ico { font-size:15px; width:18px; text-align:center; }
+    .sidebar-footer { padding:14px 20px; border-top:1px solid #1e293b; font-size:12px; color:#475569; display:flex; align-items:center; gap:6px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .main { margin-left:220px; flex:1; display:flex; flex-direction:column; }
+    .topbar { background:var(--card); border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+    .topbar h1 { font-size:18px; font-weight:600; }
+    .page { padding:24px 28px; }
+    .btn { display:inline-flex; align-items:center; gap:5px; padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; transition:all .15s; text-decoration:none; white-space:nowrap; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-primary:hover { background:#1447e6; }
+    .btn-danger { background:var(--danger); color:#fff; }
+    .btn { background:#f3f4f6; color:#374151; }
+    .btn-danger:hover { background:#c81e1e; }
+    .btn-sm { padding:5px 10px; font-size:12px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); margin-bottom:20px; }
+    .card-head { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .card-head h2 { font-size:15px; font-weight:600; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th { padding:9px 16px; text-align:left; font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; background:#f9fafb; border-bottom:1px solid var(--border); }
+    td { padding:11px 16px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#fafafa; }
+    .badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:100px; font-size:11.5px; font-weight:500; }
+    .b-blue { background:var(--primary-light); color:var(--primary); }
+    .b-gray { background:var(--neutral-light); color:var(--neutral); }
+    .b-green { background:var(--success-light); color:var(--success); }
+    .keyword-tag { display:inline-block; padding:2px 8px; background:var(--primary-light); color:var(--primary); border-radius:4px; font-size:12px; margin:2px; }
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block; margin-bottom:5px; font-size:13px; font-weight:500; }
+    .form-control { width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:6px; font-size:13.5px; transition:border-color .15s; }
+    .form-control:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(26,86,219,.1); }
+    select.form-control { background:#fff; }
+    .form-hint { font-size:11.5px; color:var(--text-2); margin-top:4px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .form-padding { padding:20px; }
+    .presets { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+    .preset-btn { padding:4px 10px; font-size:12px; background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; border-radius:4px; cursor:pointer; }
+    .preset-btn:hover { background:#e5e7eb; }
+    .checkbox-row { display:flex; align-items:center; gap:8px; font-size:13.5px; }
+    .checkbox-row input { width:16px; height:16px; cursor:pointer; }
+    .empty { padding:40px 20px; text-align:center; color:var(--text-2); }
+    a { color:var(--primary); text-decoration:none; }
+    .alert { padding:12px 16px; border-radius:6px; font-size:13.5px; margin-bottom:16px; }
+    .alert-success { background:var(--success-light); color:var(--success); border:1px solid #a7f3d0; }
+    .alert-error { background:var(--danger-light); color:var(--danger); border:1px solid #fca5a5; }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">📈 FinNews</div>
+      <div class="logo-sub">金融新闻监控助手</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">监控</div>
+      <a href="/" class="nav-a"><span class="ico">🏠</span> 系统概览</a>
+      <a href="/news" class="nav-a"><span class="ico">📰</span> 新闻浏览</a>
+      <div class="nav-label" style="margin-top:4px">配置</div>
+      <a href="/portfolio" class="nav-a active"><span class="ico">💼</span> 持仓管理</a>
+      <a href="/settings" class="nav-a"><span class="ico">⚙️</span> 系统设置</a>
+    </nav>
+    <div class="sidebar-footer"><span class="dot"></span> 服务运行中</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>💼 持仓管理</h1>
+    </div>
+    <div class="page">
+
+      <% if (locals.message) { %>
+        <div class="alert alert-success">✅ <%= message %></div>
+      <% } %>
+      <% if (locals.error) { %>
+        <div class="alert alert-error">❌ <%= error %></div>
+      <% } %>
+
+      <!-- Add form -->
+      <div class="card">
+        <div class="card-head"><h2>➕ 添加新持仓</h2></div>
+        <form action="/portfolio/add" method="POST" class="form-padding">
+          <div class="form-row">
+            <div class="form-group">
+              <label>持仓名称</label>
+              <input type="text" name="name" class="form-control" placeholder="如：宁德时代" required>
+            </div>
+            <div class="form-group">
+              <label>证券代码</label>
+              <input type="text" name="code" class="form-control" placeholder="如：300750.SZ">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>类型</label>
+              <select name="type" class="form-control">
+                <option value="stock">股票</option>
+                <option value="etf">ETF</option>
+                <option value="commodity">大宗商品</option>
+                <option value="bond">债券</option>
+                <option value="fund">基金</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>市场</label>
+              <select name="market" class="form-control">
+                <option value="A">A股</option>
+                <option value="HK">港股</option>
+                <option value="US">美股</option>
+                <option value="commodity">大宗商品</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>关联关键词 <span style="color:#9ca3af;font-weight:400">（用逗号分隔）</span></label>
+            <input type="text" name="keywords" id="kwInput" class="form-control" placeholder="如：宁德时代,CATL,动力电池,锂电池" required>
+            <div class="presets">
+              <span style="font-size:12px;color:#6b7280;line-height:24px">快速添加：</span>
+              <button type="button" class="preset-btn" onclick="addPreset('新能源')">🔋 新能源</button>
+              <button type="button" class="preset-btn" onclick="addPreset('半导体')">💻 半导体</button>
+              <button type="button" class="preset-btn" onclick="addPreset('消费')">🛒 消费</button>
+              <button type="button" class="preset-btn" onclick="addPreset('金融')">🏦 金融</button>
+              <button type="button" class="preset-btn" onclick="addPreset('黄金')">🥇 黄金</button>
+              <button type="button" class="preset-btn" onclick="addPreset('原油')">🛢️ 原油</button>
+              <button type="button" class="preset-btn" onclick="addPreset('地产')">🏠 地产</button>
+              <button type="button" class="preset-btn" onclick="addPreset('医疗')">💊 医疗</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>排除关键词 <span style="color:#9ca3af;font-weight:400">（减少噪音，用逗号分隔）</span></label>
+            <input type="text" name="excludeKeywords" class="form-control" placeholder="如：电动自行车">
+          </div>
+          <div style="display:flex;gap:24px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+            <label class="checkbox-row">
+              <input type="checkbox" name="enableAIAnalysis" checked> 启用AI分析
+            </label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:13px;font-weight:500">AI影响阈值</label>
+              <input type="number" name="impactThreshold" value="50" min="0" max="100" class="form-control" style="width:80px">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:13px;font-weight:500">邮件提醒阈值</label>
+              <input type="number" name="emailAlertThreshold" value="70" min="0" max="100" class="form-control" style="width:80px">
+              <span style="font-size:12px;color:#6b7280">超过此分数发送邮件</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">+ 添加持仓</button>
+        </form>
+      </div>
+
+      <!-- List -->
+      <div class="card">
+        <div class="card-head"><h2>📋 我的持仓 (<%= positions.length %>)</h2></div>
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>代码</th>
+              <th>市场/类型</th>
+              <th>关键词</th>
+              <th>AI分析</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (positions.length === 0) { %>
+              <tr><td colspan="6">
+                <div class="empty">暂无持仓，请在上方添加您的持仓标的</div>
+              </td></tr>
+            <% } else { %>
+              <% positions.forEach(function(pos) { %>
+                <tr>
+                  <td><strong><%= pos.name %></strong></td>
+                  <td style="color:#6b7280;font-size:12px"><%= pos.code %></td>
+                  <td><span class="badge b-blue"><%= pos.market %> · <%= pos.type %></span></td>
+                  <td>
+                    <% 
+                      var keys = [];
+                      if (Array.isArray(pos.keywords)) {
+                        keys = pos.keywords;
+                      } else if (typeof pos.keywords === 'string' && pos.keywords) {
+                        try {
+                          var parsed = JSON.parse(pos.keywords);
+                          keys = Array.isArray(parsed) ? parsed : [];
+                        } catch(e) {
+                          keys = pos.keywords.split(',').map(function(k) { return k.trim(); }).filter(function(k) { return k; });
+                        }
+                      }
+                    %>
+                    <% keys.slice(0, 4).forEach(function(k) { %>
+                      <span class="keyword-tag"><%= k %></span>
+                    <% }); %>
+                    <% if (keys.length > 4) { %><span class="keyword-tag" style="background:#f3f4f6;color:#6b7280">+<%= keys.length-4 %></span><% } %>
+                  </td>
+                  <td><%- pos.enableAIAnalysis ? '<span class="badge b-green">✓ 启用</span>' : '<span class="badge b-gray">禁用</span>' %></td>
+                  <td>
+                    <button class="btn btn-primary btn-sm" onclick="editPos('<%= pos.id %>')" style="margin-right:6px">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="deletePos('<%= pos.id %>', '<%= pos.name %>')">删除</button>
+                  </td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 编辑弹窗 -->
+  <div id="editModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:8px;width:90%;max-width:600px;max-height:90vh;overflow:auto;box-shadow:0 20px 25px -5px rgba(0,0,0,.1)">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <h3 style="font-size:16px;font-weight:600">✏️ 编辑持仓</h3>
+        <button onclick="closeEditModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280">&times;</button>
+      </div>
+      <form id="editForm" action="" method="POST" class="form-padding">
+        <input type="hidden" name="id" id="editId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>持仓名称</label>
+            <input type="text" name="name" id="editName" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>证券代码</label>
+            <input type="text" name="code" id="editCode" class="form-control">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>类型</label>
+            <select name="type" id="editType" class="form-control">
+              <option value="stock">股票</option>
+              <option value="etf">ETF</option>
+              <option value="commodity">大宗商品</option>
+              <option value="bond">债券</option>
+              <option value="fund">基金</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>市场</label>
+            <select name="market" id="editMarket" class="form-control">
+              <option value="A">A股</option>
+              <option value="HK">港股</option>
+              <option value="US">美股</option>
+              <option value="commodity">大宗商品</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>关联关键词 <span style="color:#9ca3af;font-weight:400">（用逗号分隔）</span></label>
+          <input type="text" name="keywords" id="editKeywords" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>排除关键词 <span style="color:#9ca3af;font-weight:400">（用逗号分隔）</span></label>
+          <input type="text" name="excludeKeywords" id="editExcludeKeywords" class="form-control">
+        </div>
+        <div style="display:flex;gap:24px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <label class="checkbox-row">
+            <input type="checkbox" name="enableAIAnalysis" id="editEnableAI"> 启用AI分析
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:13px;font-weight:500">AI影响阈值</label>
+            <input type="number" name="impactThreshold" id="editImpactThreshold" min="0" max="100" class="form-control" style="width:80px">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:13px;font-weight:500">邮件提醒阈值</label>
+            <input type="number" name="emailAlertThreshold" id="editEmailAlertThreshold" min="0" max="100" class="form-control" style="width:80px">
+            <span style="font-size:12px;color:#6b7280">超过此分数发送邮件</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="button" class="btn" onclick="closeEditModal()" style="background:#f3f4f6;color:#374151">取消</button>
+          <button type="submit" class="btn btn-primary">保存修改</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const positions = <%- JSON.stringify(positions) %>;
+
+    const presets = {
+      '新能源': ['宁德时代','比亚迪','特斯拉','锂电池','动力电池','光伏','隆基绿能','新能源车'],
+      '半导体': ['中芯国际','英特尔','英伟达','芯片','半导体','晶圆代工','AMD','台积电','华为芯片'],
+      '消费': ['茅台','五粮液','海天味业','农夫山泉','伊利','蒙牛','消费升级','白酒'],
+      '金融': ['工商银行','建设银行','招商银行','中国平安','银行','保险','券商','利率'],
+      '黄金': ['黄金','COMEX','伦敦金','金价','避险','贵金属'],
+      '原油': ['原油','石油','OPEC','布伦特','WTI','油价','天然气'],
+      '地产': ['房地产','碧桂园','万科','融创','限购','房价','楼市'],
+      '医疗': ['药企','医疗器械','创新药','集采','医保','生物科技']
+    };
+
+    function addPreset(name) {
+      const input = document.getElementById('kwInput');
+      const current = input.value ? input.value.split(',').map(k => k.trim()).filter(k => k) : [];
+      const newKeys = presets[name].filter(k => !current.includes(k));
+      input.value = [...current, ...newKeys].join(', ');
+    }
+
+    function deletePos(id, name) {
+      if (confirm('确定要删除持仓「' + name + '」吗？')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/portfolio/delete/' + id;
+        document.body.appendChild(form);
+        form.submit();
+      }
+    }
+
+    // 解析关键词字段（可能是JSON字符串或数组）
+    function parseKeywords(val) {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try {
+          const parsed = JSON.parse(val);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          // 如果不是JSON，按逗号分割
+          return val.split(',').map(k => k.trim()).filter(k => k);
+        }
+      }
+      return [];
+    }
+
+    function editPos(id) {
+      const pos = positions.find(p => p.id === id);
+      if (!pos) return;
+
+      document.getElementById('editForm').action = '/portfolio/edit/' + id;
+      document.getElementById('editId').value = pos.id;
+      document.getElementById('editName').value = pos.name;
+      document.getElementById('editCode').value = pos.code || '';
+      document.getElementById('editType').value = pos.type || 'stock';
+      document.getElementById('editMarket').value = pos.market || 'A';
+      document.getElementById('editKeywords').value = parseKeywords(pos.keywords).join(', ');
+      document.getElementById('editExcludeKeywords').value = parseKeywords(pos.excludeKeywords).join(', ');
+      document.getElementById('editEnableAI').checked = !!pos.enableAIAnalysis;
+      document.getElementById('editImpactThreshold').value = pos.impactThreshold || 50;
+      document.getElementById('editEmailAlertThreshold').value = pos.emailAlertThreshold || '';
+
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    // 点击弹窗外部关闭
+    document.getElementById('editModal').addEventListener('click', function(e) {
+      if (e.target === this) closeEditModal();
+    });
+  </script>
+</body>
+</html>
