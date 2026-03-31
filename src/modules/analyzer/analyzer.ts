@@ -156,7 +156,7 @@ async function fetchArticleContent(url: string): Promise<{ content: string, publ
       .trim();
 
     return {
-      content: truncate(content, 2000), // 限制2000字，避免token过长
+      content: truncate(content, 5000), // 限制5000字，保证内容完整性
       publishTime
     };
   } catch (error) {
@@ -263,7 +263,7 @@ export async function analyzeWithAI(article: any, positions: Position[]): Promis
   let analysisContent = '';
   if (content && content.length > 100) {
     // 有正文时，主要使用正文
-    analysisContent = `\n新闻内容:\n${content.substring(0, 2000)}`;
+    analysisContent = `\n新闻内容:\n${content.substring(0, 5000)}`;
     console.log(`文章 [ID: ${article.id}] - 使用正文分析，长度: ${content.length}`);
   } else if (article.summary && article.summary.length > 10 && article.summary !== article.title) {
     // 无正文时使用摘要
