@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { queryAll, queryOne, run } from '../../config/database';
-import { Position, AIAnalysisResult } from '../../types';
+import { Position, AIAnalysisResult, MultiPositionAnalysisResult, PositionAnalysis } from '../../types';
 import { matchKeywords, getSetting, getRandomUserAgent, stripHtml, truncate } from '../../utils/helpers';
 import { getOpenCodeClient } from './opencode-client';
 
@@ -53,8 +53,8 @@ export function analyzeWithKeywords(article: any, positions: Position[]): { matc
   return { matched: allMatched, keywords: [...new Set(allKeywords)] };
 }
 
-// 抓取文章正文（用于AI分析）
-async function fetchArticleContent(url: string): Promise<string> {
+// 抓取文章正文和发布时间（用于AI分析）
+async function fetchArticleContent(url: string): Promise<{ content: string, publishTime?: Date }> {
   try {
     const response = await axios.get(url, {
       headers: {
@@ -70,6 +70,57 @@ async function fetchArticleContent(url: string): Promise<string> {
 
     // 移除脚本、样式、导航等无关元素
     $('script, style, nav, header, footer, .ad, .advertisement, .share, .comment').remove();
+
+    // 提取发布时间
+    let publishTime: Date | undefined;
+    
+    // 策略1：查找 <time> 标签（含 datetime 属性）
+    const $timeEl = $('time[datetime]').first();
+    if ($timeEl.length) {
+      const dt = $timeEl.attr('datetime');
+      if (dt) {
+        const d = new Date(dt);
+        if (!isNaN(d.getTime())) publishTime = d;
+      }
+    }
+
+    // 策略2：查找常见的时间元素
+    if (!publishTime) {
+      const timeSelectors = [
+        '.time', '.publish-time', '.post-time', '.article-time',
+        '.news-time', '.date', '.article-date', '.publish-date'
+      ];
+      
+      for (const selector of timeSelectors) {
+        const $el = $(selector).first();
+        if ($el.length) {
+          const text = $el.text().trim();
+          // 匹配常见时间格式：2026-03-28 12:26, 2026/03/28 12:26, 2026-03-28等
+          const timePattern = /(\d{4}[-\/]\d{1,2}[-\/]\d{1,2}(\s+\d{1,2}:\d{2})?)/;
+          const match = text.match(timePattern);
+          if (match) {
+            const normalized = match[1].replace(/\//g, '-');
+            const d = new Date(normalized);
+            if (!isNaN(d.getTime())) {
+              publishTime = d;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 策略3：从页面文本中提取时间
+    if (!publishTime) {
+      const pageText = $('body').text();
+      const timePattern = /(\d{4}[-\/]\d{1,2}[-\/]\d{1,2}\s+\d{1,2}:\d{2})/;
+      const match = pageText.match(timePattern);
+      if (match) {
+        const normalized = match[1].replace(/\//g, '-');
+        const d = new Date(normalized);
+        if (!isNaN(d.getTime())) publishTime = d;
+      }
+    }
 
     // 尝试多种正文选择器
     const contentSelectors = [
@@ -104,10 +155,13 @@ async function fetchArticleContent(url: string): Promise<string> {
       .replace(/\n\s*\n/g, '\n')
       .trim();
 
-    return truncate(content, 2000); // 限制2000字，避免token过长
+    return {
+      content: truncate(content, 2000), // 限制2000字，避免token过长
+      publishTime
+    };
   } catch (error) {
     console.error('抓取正文失败:', (error as Error).message);
-    return '';
+    return { content: '' };
   }
 }
 
@@ -145,8 +199,29 @@ async function retryWithBackoff<T>(
   throw lastError;
 }
 
-// AI分析新闻影响
-export async function analyzeWithAI(article: any, position: Position): Promise<AIAnalysisResult> {
+// 创建默认的多持仓分析结果（用于API未配置时）
+function createDefaultMultiResult(positions: Position[], reason: string): MultiPositionAnalysisResult {
+  const analysis: PositionAnalysis[] = positions.map(p => ({
+    positionCode: p.code,
+    positionName: p.name,
+    impact: '中性' as const,
+    score: 50,
+    reason
+  }));
+
+  return {
+    overallImpact: '中性',
+    overallScore: 50,
+    analysis,
+    summary: reason
+  };
+}
+
+// AI分析新闻影响（支持多持仓）
+export async function analyzeWithAI(article: any, positions: Position[]): Promise<MultiPositionAnalysisResult> {
+  console.log(`开始分析文章 [ID: ${article.id}] - ${article.title.substring(0, 50)}...`);
+  console.log(`文章 [ID: ${article.id}] - 分析 ${positions.length} 个持仓: ${positions.map(p => p.name).join(', ')}`);
+  
   const aiProvider = await getSetting('aiProvider') || 'openrouter';
   const apiKey = await getSetting('openRouterApiKey');
   const ollamaApiKey = await getSetting('ollamaApiKey');
@@ -155,28 +230,32 @@ export async function analyzeWithAI(article: any, position: Position): Promise<A
   const model = await getSetting('aiModel') || 'deepseek/deepseek-chat:free';
 
   if (aiProvider === 'openrouter' && !apiKey) {
-    return {
-      impact: '中性',
-      score: 50,
-      reason: '未配置OpenRouter API Key，使用默认评分'
-    };
+    console.warn(`文章 [ID: ${article.id}] - 未配置OpenRouter API Key，使用默认评分`);
+    return createDefaultMultiResult(positions, '未配置OpenRouter API Key，使用默认评分');
   }
   
   if (aiProvider === 'ollama' && !ollamaApiKey) {
-    return {
-      impact: '中性',
-      score: 50,
-      reason: '未配置Ollama API Key，使用默认评分'
-    };
+    console.warn(`文章 [ID: ${article.id}] - 未配置Ollama API Key，使用默认评分`);
+    return createDefaultMultiResult(positions, '未配置Ollama API Key，使用默认评分');
   }
 
   // 如果没有正文，尝试抓取
   let content = article.content || '';
   if (!content || content.length < 100) {
-    content = await fetchArticleContent(article.url);
+    console.log(`文章 [ID: ${article.id}] - 尝试抓取正文...`);
+    const result = await fetchArticleContent(article.url);
+    content = result.content;
     // 保存正文到数据库
     if (content) {
+      console.log(`文章 [ID: ${article.id}] - 成功抓取正文，长度: ${content.length}`);
       run('UPDATE articles SET content = ? WHERE id = ?', [content, article.id]);
+    } else {
+      console.warn(`文章 [ID: ${article.id}] - 抓取正文失败，将使用摘要分析`);
+    }
+    // 如果找到真实发布时间，更新到数据库
+    if (result.publishTime) {
+      console.log(`文章 [ID: ${article.id}] - 找到真实发布时间: ${result.publishTime.toISOString()}`);
+      run('UPDATE articles SET publishTime = ? WHERE id = ?', [result.publishTime.toISOString(), article.id]);
     }
   }
 
@@ -185,26 +264,47 @@ export async function analyzeWithAI(article: any, position: Position): Promise<A
   if (content && content.length > 100) {
     // 有正文时，主要使用正文
     analysisContent = `\n新闻内容:\n${content.substring(0, 2000)}`;
+    console.log(`文章 [ID: ${article.id}] - 使用正文分析，长度: ${content.length}`);
   } else if (article.summary && article.summary.length > 10 && article.summary !== article.title) {
     // 无正文时使用摘要
     analysisContent = `\n新闻摘要:\n${article.summary}`;
+    console.log(`文章 [ID: ${article.id}] - 使用摘要分析，长度: ${article.summary.length}`);
+  } else {
+    console.warn(`文章 [ID: ${article.id}] - 无足够内容进行分析`);
   }
 
-  const prompt = `你是一位专业的金融分析师。请分析以下新闻对持仓的影响。
+  // 构建持仓列表
+  const positionsList = positions.map((p, i) => `${i + 1}. ${p.name} (${p.code}) - ${p.type}`).join('\n');
 
-持仓信息:
-- 持仓名称: ${position.name}
-- 持仓代码: ${position.code}
+  const prompt = `你是一位专业的金融分析师。请分析以下新闻对用户持仓组合的影响。
+
+用户的持仓列表:
+${positionsList}
 
 新闻标题: ${article.title}${analysisContent}
 
-请分析:
-1. 此新闻对持仓的影响方向 (利好/利空/中性)
-2. 影响程度评分 (0-100)
-3. 简要说明理由
+请分析这条新闻对每个持仓的影响，并返回JSON格式:
 
-请用JSON格式返回:
-{"impact": "利好|利空|中性", "score": 0-100, "reason": "原因说明"}`;
+{
+  "overallImpact": "利好|利空|中性",
+  "overallScore": 0-100,
+  "analysis": [
+    {
+      "positionCode": "持仓代码",
+      "positionName": "持仓名称",
+      "impact": "利好|利空|中性|无关",
+      "score": 0-100,
+      "reason": "具体影响原因"
+    }
+  ],
+  "summary": "整体分析总结"
+}
+
+注意:
+- 对明显无关的持仓，impact设为"无关"，score设为0
+- 重点分析与新闻直接相关的持仓
+- overallScore取所有持仓中的最高影响分数
+- 确保返回的JSON格式完整且有效`;
 
   // 清理AI返回的JSON内容（去除Markdown代码块、中文前缀等）
   function cleanJsonResponse(content: string): string {
@@ -233,6 +333,8 @@ export async function analyzeWithAI(article: any, position: Position): Promise<A
 
   try {
     let rawContent = '';
+    
+    console.log(`文章 [ID: ${article.id}] - 使用${aiProvider}进行AI分析，模型: ${model}`);
     
     if (aiProvider === 'opencode') {
       // OpenCode 本地 CLI 服务
@@ -288,31 +390,63 @@ export async function analyzeWithAI(article: any, position: Position): Promise<A
       rawContent = response.data.choices[0].message.content;
     }
     
+    console.log(`文章 [ID: ${article.id}] - AI返回原始内容长度: ${rawContent.length}`);
+    
     const content = cleanJsonResponse(rawContent);
+    console.log(`文章 [ID: ${article.id}] - 清理后JSON: ${content.substring(0, 200)}...`);
+    
     const result = JSON.parse(content);
+    console.log(`文章 [ID: ${article.id}] - 整体分析结果: ${result.overallImpact}, 评分: ${result.overallScore}`);
+    console.log(`文章 [ID: ${article.id}] - 各持仓分析数量: ${result.analysis?.length || 0}`);
+    
+    // 验证并规范化结果
+    const analysis: PositionAnalysis[] = (result.analysis || []).map((item: any) => ({
+      positionCode: item.positionCode || '',
+      positionName: item.positionName || '',
+      impact: ['利好', '利空', '中性', '无关'].includes(item.impact) ? item.impact : '中性',
+      score: Math.min(100, Math.max(0, parseInt(item.score) || 0)),
+      reason: item.reason || '无分析原因'
+    }));
+
+    // 补充未返回的持仓（AI可能漏掉某些持仓）
+    const returnedCodes = new Set(analysis.map(a => a.positionCode));
+    for (const pos of positions) {
+      if (!returnedCodes.has(pos.code)) {
+        analysis.push({
+          positionCode: pos.code,
+          positionName: pos.name,
+          impact: '中性',
+          score: 50,
+          reason: 'AI未返回该持仓的分析结果'
+        });
+      }
+    }
+    
     return {
-      impact: result.impact as '利好' | '利空' | '中性',
-      score: Math.min(100, Math.max(0, parseInt(result.score) || 50)),
-      reason: result.reason
+      overallImpact: ['利好', '利空', '中性'].includes(result.overallImpact) ? result.overallImpact : '中性',
+      overallScore: Math.min(100, Math.max(0, parseInt(result.overallScore) || 50)),
+      analysis,
+      summary: result.summary || '无整体总结'
     };
   } catch (error: any) {
     const errorMsg = error?.response?.data?.error?.message || error.message || 'Unknown error';
     const errorCode = error?.response?.status || 'N/A';
-    console.error('AI分析失败:', `[${errorCode}]`, errorMsg);
-    return {
-      impact: '中性',
-      score: 50,
-      reason: `AI分析调用失败: [${errorCode}] ${errorMsg}`
-    };
+    console.error(`文章 [ID: ${article.id}] - AI分析失败: [${errorCode}] ${errorMsg}`);
+    console.error(`文章 [ID: ${article.id}] - 标题: ${article.title}`);
+    console.error(`文章 [ID: ${article.id}] - URL: ${article.url}`);
+    return createDefaultMultiResult(positions, `AI分析调用失败: [${errorCode}] ${errorMsg}`);
   }
 }
 
 // 处理单篇文章
 export async function processArticle(article: any): Promise<void> {
+  console.log(`开始处理文章 [ID: ${article.id}] - ${article.title.substring(0, 50)}...`);
+  
   const positions = getAllPositions();
   const { matched, keywords } = analyzeWithKeywords(article, positions);
 
   if (matched.length === 0) {
+    console.log(`文章 [ID: ${article.id}] - 无持仓关键词匹配，标记为无关`);
     // 没有持仓匹配，标记为无关，避免下次重复处理
     run(
       'UPDATE articles SET aiImpactDirection = ?, aiImpactScore = ?, aiImpactReason = ? WHERE id = ?',
@@ -321,32 +455,53 @@ export async function processArticle(article: any): Promise<void> {
     return;
   }
 
+  console.log(`文章 [ID: ${article.id}] - 匹配到 ${matched.length} 个持仓，关键词: ${keywords.join(', ')}`);
+  
   // 更新文章的关键词
   run(
     'UPDATE articles SET keywords = ? WHERE id = ?',
     [JSON.stringify(keywords), article.id]
   );
 
-  // 对每个匹配的持仓进行AI分析（取第一个匹配持仓，避免重复写入）
-  const position = matched[0];
-  if (!position.enableAIAnalysis) {
-    // 不使用AI，根据关键词数量评分
+  // 检查是否所有匹配的持仓都启用了AI分析
+  const enabledAIPositions = matched.filter(p => p.enableAIAnalysis);
+  
+  if (enabledAIPositions.length === 0) {
+    // 所有匹配的持仓都未启用AI分析，根据关键词数量评分
     const score = keywords.length >= 3 ? 80 : keywords.length >= 2 ? 60 : 40;
     const direction = score >= 60 ? '利好' : '中性';
+    
+    console.log(`文章 [ID: ${article.id}] - 未启用AI分析，根据关键词评分: ${score} (${direction})`);
 
     run(
       'UPDATE articles SET aiImpactScore = ?, aiImpactDirection = ?, aiImpactReason = ? WHERE id = ?',
       [score, direction, `关键词匹配: ${keywords.join(', ')}`, article.id]
     );
   } else {
-    // 使用AI分析
-    const result = await analyzeWithAI(article, position);
+    // 使用AI分析所有启用了AI分析的持仓
+    console.log(`文章 [ID: ${article.id}] - 开始AI分析 ${enabledAIPositions.length} 个持仓...`);
+    const result = await analyzeWithAI(article, enabledAIPositions);
+    
+    console.log(`文章 [ID: ${article.id}] - AI分析完成，整体结果: ${result.overallImpact}, 评分: ${result.overallScore}`);
+    
+    // 找出影响最大的持仓
+    const maxImpactPosition = result.analysis.reduce((max, curr) => curr.score > max.score ? curr : max, result.analysis[0]);
+    console.log(`文章 [ID: ${article.id}] - 影响最大的持仓: ${maxImpactPosition.positionName} (${maxImpactPosition.impact}, ${maxImpactPosition.score}分)`);
 
+    // 保存整体分析结果到文章表
     run(
       'UPDATE articles SET aiImpactScore = ?, aiImpactDirection = ?, aiImpactReason = ? WHERE id = ?',
-      [result.score, result.impact, result.reason, article.id]
+      [result.overallScore, result.overallImpact, result.summary, article.id]
+    );
+    
+    // 保存每个持仓的详细分析结果（存储为JSON）
+    run(
+      'UPDATE articles SET positionAnalysis = ? WHERE id = ?',
+      [JSON.stringify(result.analysis), article.id]
     );
   }
+  
+  console.log(`文章 [ID: ${article.id}] - 处理完成`);
 }
 
 // 批量处理所有未分析的文章（支持进度回调）

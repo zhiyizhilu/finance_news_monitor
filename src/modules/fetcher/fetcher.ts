@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { parseStringPromise } from 'xml2js';
-import { queryAll, queryOne, run, saveDb } from '../../config/database';
+import { queryAll, queryOne, run } from '../../config/database';
 import { NewsSource, NewsArticle } from '../../types';
 import { generateId, randomDelay, getRandomUserAgent, stripHtml, truncate } from '../../utils/helpers';
 

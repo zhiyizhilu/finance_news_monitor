@@ -28,9 +28,30 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
+    /* Mobile menu button */
+    .mobile-menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 200;
+      color: #f1f5f9;
+    }
+    .mobile-menu-btn .icon {
+      font-size: 24px;
+    }
+
     /* Layout */
     .app-layout { display: flex; min-height: 100vh; }
-    .sidebar { width: 240px; background: #1e293b; color: #cbd5e1; display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; }
+    .sidebar { width: 240px; background: #1e293b; color: #cbd5e1; display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; transition: transform 0.3s ease;
+    }
     .sidebar-logo { padding: 20px 24px; border-bottom: 1px solid #334155; }
     .sidebar-logo h1 { font-size: 18px; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 8px; }
     .sidebar-logo p { font-size: 12px; color: #64748b; margin-top: 4px; }
@@ -50,6 +71,80 @@
     .topbar-title { font-size: 20px; font-weight: 600; color: var(--text); }
     .topbar-actions { display: flex; gap: 10px; }
     .page-content { padding: 24px 32px; flex: 1; }
+
+    /* Mobile styles */
+    @media (max-width: 768px) {
+      .mobile-menu-btn {
+        display: flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        width: 260px;
+      }
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+      }
+      .topbar {
+        padding: 14px 16px 14px 60px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .topbar-title {
+        font-size: 16px;
+        width: 100%;
+      }
+      .page-content {
+        padding: 16px;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .stat-card {
+        padding: 14px;
+      }
+      .stat-card .stat-value {
+        font-size: 24px;
+      }
+      .stat-card .stat-label {
+        font-size: 11px;
+      }
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      table {
+        font-size: 12px;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      th, td {
+        padding: 8px 10px;
+      }
+      th {
+        font-size: 10px;
+      }
+      .btn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .card-header {
+        padding: 14px 16px;
+      }
+      .card-header h2 {
+        font-size: 14px;
+      }
+      .card-body {
+        padding: 16px;
+      }
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
 
     /* Buttons */
     .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; text-decoration: none; }
@@ -136,8 +231,11 @@
   </style>
 </head>
 <body>
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <span class="icon">☰</span>
+  </button>
   <div class="app-layout">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
         <h1>📈 FinNews</h1>
         <p>金融新闻监控助手</p>
@@ -174,5 +272,11 @@
       </div>
     </div>
   </div>
+  <script>
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('show');
+    }
+  </script>
 </body>
 </html>

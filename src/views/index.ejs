@@ -108,9 +108,39 @@
     .filter-info { padding:10px 16px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;font-size:13px;color:#166534;display:flex;align-items:center;justify-content:space-between; }
     .filter-info button { background:#fff;border:1px solid #86efac;border-radius:4px;padding:4px 10px;font-size:12px;color:#166534;cursor:pointer; }
     .filter-info button:hover { background:#dcfce7; }
+
+    /* 移动端响应式样式 */
+    .mobile-menu-btn { display:none; position:fixed; top:12px; left:12px; z-index:200; width:40px; height:40px; background:#1e293b; border:none; border-radius:8px; color:#fff; font-size:18px; cursor:pointer; align-items:center; justify-content:center; }
+    .sidebar-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:99; }
+    .sidebar-overlay.show { display:block; }
+    @media(max-width:768px){
+      .mobile-menu-btn { display:flex; }
+      .sidebar { transform:translateX(-100%); transition:transform .3s; width:260px; }
+      .sidebar.show { transform:translateX(0); }
+      .main { margin-left:0; }
+      .topbar { padding:14px 16px 14px 60px; }
+      .topbar h1 { font-size:16px; }
+      .page { padding:16px; }
+      .stats { grid-template-columns:repeat(2,1fr); gap:10px; }
+      .stat { padding:14px; }
+      .stat-val { font-size:24px; }
+      .stat-label { font-size:11px; }
+      .grid-2 { grid-template-columns:1fr; gap:16px; }
+      table { font-size:12px; }
+      th, td { padding:8px 10px; }
+      th { font-size:10px; }
+      .btn { padding:6px 10px; font-size:12px; }
+    }
+    @media(max-width:480px){
+      .stats { grid-template-columns:1fr; }
+      .topbar { flex-wrap:wrap; gap:10px; }
+      .topbar h1 { width:100%; }
+    }
   </style>
 </head>
 <body>
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-title">📈 FinNews</div>
@@ -281,6 +311,12 @@
   <script>
     let progressES = null;
     let currentFilter = null;
+
+    // 移动端侧边栏切换
+    function toggleSidebar() {
+      document.querySelector('.sidebar').classList.toggle('show');
+      document.querySelector('.sidebar-overlay').classList.toggle('show');
+    }
 
     // 按持仓筛选新闻
     function filterByPosition(row, positionName) {

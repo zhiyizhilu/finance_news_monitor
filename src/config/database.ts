@@ -3,7 +3,12 @@ import path from 'path';
 
 // 数据目录放在项目根目录的 data 文件夹
 const dataDir = path.join(process.cwd(), 'data');
-const dbPath = path.join(dataDir, 'database.json');
+
+// 分离的数据文件路径
+const positionsPath = path.join(dataDir, 'positions.json');
+const articlesPath = path.join(dataDir, 'articles.json');
+const settingsPath = path.join(dataDir, 'settings.json');
+const notificationsPath = path.join(dataDir, 'notifications.json');
 
 // 确保数据目录存在
 if (!fs.existsSync(dataDir)) {
@@ -11,48 +16,188 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // 内存数据库
-interface Database {
+interface PositionsDb {
   positions: any[];
-  articles: any[];
-  notifications: any[];
-  settings: Record<string, string>;
-  sources: any[];
 }
 
-let db: Database = {
-  positions: [],
-  articles: [],
-  notifications: [],
-  settings: {},
-  sources: []
-};
+interface ArticlesDb {
+  articles: any[];
+}
 
-// 加载数据库
-function loadDb(): void {
-  if (fs.existsSync(dbPath)) {
+interface SettingsDb {
+  settings: Record<string, string>;
+}
+
+interface NotificationsDb {
+  notifications: any[];
+}
+
+let positionsDb: PositionsDb = { positions: [] };
+let articlesDb: ArticlesDb = { articles: [] };
+let settingsDb: SettingsDb = { settings: {} };
+let notificationsDb: NotificationsDb = { notifications: [] };
+
+// 加载持仓数据
+function loadPositions(): void {
+  if (fs.existsSync(positionsPath)) {
     try {
-      const data = fs.readFileSync(dbPath, 'utf-8');
+      const data = fs.readFileSync(positionsPath, 'utf-8');
       if (data.trim()) {
-        db = JSON.parse(data);
+        positionsDb = JSON.parse(data);
       }
     } catch (error) {
-      console.error('加载数据库失败:', error);
-      db = { positions: [], articles: [], notifications: [], settings: {}, sources: [] };
+      console.error('加载持仓数据失败:', error);
+      positionsDb = { positions: [] };
     }
   }
 }
 
-// 保存数据库
-export function saveDb(): void {
+// 加载文章数据
+function loadArticles(): void {
+  if (fs.existsSync(articlesPath)) {
+    try {
+      const data = fs.readFileSync(articlesPath, 'utf-8');
+      if (data.trim()) {
+        articlesDb = JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('加载文章数据失败:', error);
+      articlesDb = { articles: [] };
+    }
+  }
+}
+
+// 加载设置数据
+function loadSettings(): void {
+  if (fs.existsSync(settingsPath)) {
+    try {
+      const data = fs.readFileSync(settingsPath, 'utf-8');
+      if (data.trim()) {
+        settingsDb = JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('加载设置数据失败:', error);
+      settingsDb = { settings: {} };
+    }
+  }
+}
+
+// 加载通知数据
+function loadNotifications(): void {
+  if (fs.existsSync(notificationsPath)) {
+    try {
+      const data = fs.readFileSync(notificationsPath, 'utf-8');
+      if (data.trim()) {
+        notificationsDb = JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('加载通知数据失败:', error);
+      notificationsDb = { notifications: [] };
+    }
+  }
+}
+
+// 保存持仓数据
+export function savePositions(): void {
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf-8');
+    fs.writeFileSync(positionsPath, JSON.stringify(positionsDb, null, 2), 'utf-8');
   } catch (error) {
-    console.error('保存数据库失败:', error);
+    console.error('保存持仓数据失败:', error);
+  }
+}
+
+// 保存文章数据
+export function saveArticles(): void {
+  try {
+    fs.writeFileSync(articlesPath, JSON.stringify(articlesDb, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('保存文章数据失败:', error);
+  }
+}
+
+// 保存设置数据
+export function saveSettings(): void {
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settingsDb, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('保存设置数据失败:', error);
+  }
+}
+
+// 保存通知数据
+export function saveNotifications(): void {
+  try {
+    fs.writeFileSync(notificationsPath, JSON.stringify(notificationsDb, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('保存通知数据失败:', error);
+  }
+}
+
+// 兼容旧版：保存所有数据（迁移时使用）
+export function saveDb(): void {
+  savePositions();
+  saveArticles();
+  saveSettings();
+  saveNotifications();
+}
+
+// 从旧版数据库迁移数据
+function migrateFromOldDb(): void {
+  const oldDbPath = path.join(dataDir, 'database.json');
+  if (fs.existsSync(oldDbPath)) {
+    try {
+      const data = fs.readFileSync(oldDbPath, 'utf-8');
+      if (data.trim()) {
+        const oldDb = JSON.parse(data);
+        
+        // 迁移持仓数据
+        if (oldDb.positions && Array.isArray(oldDb.positions)) {
+          positionsDb.positions = oldDb.positions;
+          savePositions();
+          console.log(`✓ 迁移 ${oldDb.positions.length} 条持仓数据`);
+        }
+        
+        // 迁移文章数据
+        if (oldDb.articles && Array.isArray(oldDb.articles)) {
+          articlesDb.articles = oldDb.articles;
+          saveArticles();
+          console.log(`✓ 迁移 ${oldDb.articles.length} 条文章数据`);
+        }
+        
+        // 迁移设置数据
+        if (oldDb.settings && typeof oldDb.settings === 'object') {
+          settingsDb.settings = oldDb.settings;
+          saveSettings();
+          console.log(`✓ 迁移设置数据`);
+        }
+        
+        // 迁移通知数据
+        if (oldDb.notifications && Array.isArray(oldDb.notifications)) {
+          notificationsDb.notifications = oldDb.notifications;
+          saveNotifications();
+          console.log(`✓ 迁移 ${oldDb.notifications.length} 条通知数据`);
+        }
+        
+        // 可选：备份旧数据库文件
+        const backupPath = path.join(dataDir, 'database.json.backup');
+        fs.renameSync(oldDbPath, backupPath);
+        console.log('✓ 旧数据库已备份为 database.json.backup');
+      }
+    } catch (error) {
+      console.error('迁移旧数据库失败:', error);
+    }
   }
 }
 
 export async function initDatabase(): Promise<void> {
-  loadDb();
+  // 加载所有数据
+  loadPositions();
+  loadArticles();
+  loadSettings();
+  loadNotifications();
+  
+  // 检查是否需要从旧版迁移
+  migrateFromOldDb();
 
   // 初始化默认设置
   const defaultSettings: Record<string, string> = {
@@ -71,24 +216,32 @@ export async function initDatabase(): Promise<void> {
     scheduledTimes: '08:00,12:00,18:00'
   };
 
+  let settingsChanged = false;
   for (const [key, value] of Object.entries(defaultSettings)) {
-    if (!(key in db.settings)) {
-      db.settings[key] = value;
+    if (!(key in settingsDb.settings)) {
+      settingsDb.settings[key] = value;
+      settingsChanged = true;
     }
   }
+  
+  if (settingsChanged) {
+    saveSettings();
+  }
 
-  saveDb();
   console.log('✓ 数据库初始化完成');
 }
 
 // 查询所有记录
 export function queryAll(sql: string, params: any[] = []): any[] {
   // 确保数据库已加载
-  loadDb();
+  loadPositions();
+  loadArticles();
+  loadSettings();
+  loadNotifications();
 
   // 简单的 SQL 模拟（实际使用 JSON 查询）
   if (sql.includes('FROM positions')) {
-    let results = [...db.positions];
+    let results = [...positionsDb.positions];
     if (sql.includes('ORDER BY')) {
       results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
@@ -100,7 +253,7 @@ export function queryAll(sql: string, params: any[] = []): any[] {
   }
 
   if (sql.includes('FROM articles')) {
-    let results = [...db.articles];
+    let results = [...articlesDb.articles];
 
     // WHERE 条件匹配
     if (sql.includes('WHERE url = ?') && params.length > 0) {
@@ -174,7 +327,7 @@ export function queryAll(sql: string, params: any[] = []): any[] {
   }
 
   if (sql.includes('FROM notifications')) {
-    let results = [...db.notifications];
+    let results = [...notificationsDb.notifications];
     if (sql.includes('ORDER BY')) {
       results.sort((a, b) => new Date(b.sentTime).getTime() - new Date(a.sentTime).getTime());
     }
@@ -186,7 +339,7 @@ export function queryAll(sql: string, params: any[] = []): any[] {
   }
 
   if (sql.includes('FROM settings')) {
-    let results = Object.entries(db.settings).map(([key, value]) => ({ key, value }));
+    let results = Object.entries(settingsDb.settings).map(([key, value]) => ({ key, value }));
     // 处理 WHERE key = ? 条件
     if (sql.includes('WHERE key = ?') && params.length > 0) {
       results = results.filter(s => s.key === params[0]);
@@ -211,7 +364,7 @@ export function queryOne(sql: string, params: any[] = []): any | undefined {
 // 执行插入/更新/删除
 export function run(sql: string, params: any[] = []): void {
   if (sql.startsWith('INSERT INTO positions')) {
-    db.positions.push({
+    positionsDb.positions.push({
       id: params[0],
       name: params[1],
       code: params[2],
@@ -225,13 +378,14 @@ export function run(sql: string, params: any[] = []): void {
       createdAt: params[10],
       updatedAt: params[11]
     });
+    savePositions();
   }
 
   if (sql.startsWith('INSERT INTO articles')) {
     // 检查是否存在
-    const exists = db.articles.find(a => a.url === params[5]);
+    const exists = articlesDb.articles.find(a => a.url === params[5]);
     if (!exists) {
-      db.articles.push({
+      articlesDb.articles.push({
         id: params[0],
         source: params[1],
         sourceName: params[2],
@@ -243,11 +397,12 @@ export function run(sql: string, params: any[] = []): void {
         keywords: [],
         notified: false
       });
+      saveArticles();
     }
   }
 
   if (sql.startsWith('INSERT INTO notifications')) {
-    db.notifications.push({
+    notificationsDb.notifications.push({
       id: params[0],
       articleId: params[1],
       positionId: params[2],
@@ -257,14 +412,15 @@ export function run(sql: string, params: any[] = []): void {
       status: params[6],
       error: params[7]
     });
+    saveNotifications();
   }
 
   if (sql.startsWith('UPDATE positions')) {
     const id = params[params.length - 1];
-    const index = db.positions.findIndex(p => p.id === id);
+    const index = positionsDb.positions.findIndex(p => p.id === id);
     if (index !== -1) {
-      db.positions[index] = {
-        ...db.positions[index],
+      positionsDb.positions[index] = {
+        ...positionsDb.positions[index],
         name: params[0],
         code: params[1],
         type: params[2],
@@ -276,16 +432,17 @@ export function run(sql: string, params: any[] = []): void {
         emailAlertThreshold: params[8],
         updatedAt: params[9]
       };
+      savePositions();
     }
   }
 
   if (sql.startsWith('UPDATE articles')) {
     const id = params[params.length - 1];
-    const index = db.articles.findIndex(a => a.id === id);
+    const index = articlesDb.articles.findIndex(a => a.id === id);
     if (index !== -1) {
       // 根据 SQL 内容更新
       if (sql.includes('keywords = ?')) {
-        db.articles[index].keywords = JSON.parse(params[0]);
+        articlesDb.articles[index].keywords = JSON.parse(params[0]);
       }
       // 处理 aiImpact 字段更新 - 需要解析SQL中的字段顺序
       if (sql.includes('aiImpactScore = ?') || sql.includes('aiImpactDirection = ?')) {
@@ -301,34 +458,46 @@ export function run(sql: string, params: any[] = []): void {
           const values = params.slice(0, -1);
           fields.forEach((field, i) => {
             if (i < values.length) {
-              db.articles[index][field] = values[i];
+              articlesDb.articles[index][field] = values[i];
             }
           });
         }
       }
       if (sql.includes('content = ?')) {
-        db.articles[index].content = params[0];
+        articlesDb.articles[index].content = params[0];
+      }
+      if (sql.includes('publishTime = ?')) {
+        articlesDb.articles[index].publishTime = params[0];
       }
       if (sql.includes('notified = 1')) {
-        db.articles[index].notified = true;
+        articlesDb.articles[index].notified = true;
       }
+      saveArticles();
     }
   }
 
   if (sql.startsWith('UPDATE settings')) {
-    db.settings[params[1]] = params[0];
+    settingsDb.settings[params[1]] = params[0];
+    saveSettings();
+  }
+
+  if (sql.startsWith('INSERT INTO settings')) {
+    settingsDb.settings[params[0]] = params[1];
+    saveSettings();
   }
 
   if (sql.startsWith('DELETE FROM positions')) {
     const id = params[0];
-    db.positions = db.positions.filter(p => p.id !== id);
+    positionsDb.positions = positionsDb.positions.filter(p => p.id !== id);
+    savePositions();
   }
-
-  saveDb();
 }
 
 export function closeDb(): void {
-  saveDb();
+  savePositions();
+  saveArticles();
+  saveSettings();
+  saveNotifications();
 }
 
 // 便捷别名

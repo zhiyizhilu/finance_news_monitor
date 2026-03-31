@@ -13,6 +13,7 @@ export interface NewsArticle {
   aiImpactScore?: number;
   aiImpactDirection?: '利好' | '利空' | '中性';
   aiImpactReason?: string;
+  positionAnalysis?: PositionAnalysis[]; // 每个持仓的详细分析结果
   notified: boolean;
   notificationLevel?: 'high' | 'medium' | 'low';
 }
@@ -74,6 +75,23 @@ export interface AIAnalysisResult {
   impact: '利好' | '利空' | '中性';
   score: number;
   reason: string;
+}
+
+// 单个持仓的AI分析结果
+export interface PositionAnalysis {
+  positionCode: string;
+  positionName: string;
+  impact: '利好' | '利空' | '中性' | '无关';
+  score: number;
+  reason: string;
+}
+
+// 多持仓AI分析结果
+export interface MultiPositionAnalysisResult {
+  overallImpact: '利好' | '利空' | '中性';
+  overallScore: number;
+  analysis: PositionAnalysis[];
+  summary: string;
 }
 
 // 通知记录
