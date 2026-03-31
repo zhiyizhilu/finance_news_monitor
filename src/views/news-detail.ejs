@@ -66,6 +66,7 @@
     .tts-btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:6px 12px; background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; }
     .tts-btn:hover { background:#e5e7eb; }
     .tts-btn.playing { background:#dbeafe; color:#1a56db; border-color:#93c5fd; }
+    .tts-btn.paused { background:#fef3c7; color:#c27803; border-color:#fcd34d; }
     .tts-btn:disabled { opacity:.6; cursor:not-allowed; }
     .toast { position:fixed; top:20px; right:20px; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:500; color:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15); z-index:1000; opacity:0; transform:translateY(-10px); transition:all .3s; }
     .toast.show { opacity:1; transform:translateY(0); }
@@ -273,10 +274,14 @@
     const voiceSelect = document.getElementById('voiceSelect');
     const rateSelect = document.getElementById('rateSelect');
     let isPlaying = false;
+    let isPaused = false;
     let utterance = null;
     let voices = [];
     let currentVoice = null;
     let currentRate = 1.0;
+    let fullText = '';
+    let currentPosition = 0;
+    let spokenTextLength = 0;
     
     // 默认声音名称
     const DEFAULT_VOICE_NAME = 'Microsoft Yunjian Online (Natural) - Chinese (Mainland)';
@@ -346,10 +351,38 @@
         localStorage.removeItem('ttsVoice');
       }
       
-      // 如果正在朗读，重新开始以应用新声音
-      if (isPlaying) {
-        window.speechSynthesis.cancel();
-        ttsBtn.click();
+      // 如果正在朗读或已暂停，先暂停再继续（应用新声音）
+      if (isPlaying || isPaused) {
+        // 保存当前位置
+        const savedPosition = currentPosition + spokenTextLength;
+        
+        // 如果正在朗读，先暂停
+        if (isPlaying && !isPaused) {
+          isPaused = true;
+          isPlaying = false;
+          // 更新UI为暂停状态
+          ttsBtn.classList.remove('playing');
+          ttsBtn.classList.add('paused');
+          ttsIcon.textContent = '▶';
+          ttsText.textContent = '继续';
+          // 延迟取消朗读
+          setTimeout(() => {
+            window.speechSynthesis.cancel();
+            // 稍后继续朗读（应用新声音）
+            setTimeout(() => {
+              currentPosition = savedPosition;
+              spokenTextLength = 0;
+              startSpeaking(currentPosition);
+            }, 50);
+          }, 50);
+        } else if (isPaused) {
+          // 如果已经暂停，直接应用新声音继续
+          setTimeout(() => {
+            currentPosition = savedPosition;
+            spokenTextLength = 0;
+            startSpeaking(currentPosition);
+          }, 50);
+        }
       }
     });
     
@@ -359,10 +392,38 @@
       localStorage.setItem('ttsRate', rateSelect.value);
       showToast('语速已设置为: ' + rateSelect.value + 'x', 'success');
       
-      // 如果正在朗读，重新开始以应用新语速
-      if (isPlaying) {
-        window.speechSynthesis.cancel();
-        ttsBtn.click();
+      // 如果正在朗读或已暂停，先暂停再继续（应用新语速）
+      if (isPlaying || isPaused) {
+        // 保存当前位置
+        const savedPosition = currentPosition + spokenTextLength;
+        
+        // 如果正在朗读，先暂停
+        if (isPlaying && !isPaused) {
+          isPaused = true;
+          isPlaying = false;
+          // 更新UI为暂停状态
+          ttsBtn.classList.remove('playing');
+          ttsBtn.classList.add('paused');
+          ttsIcon.textContent = '▶';
+          ttsText.textContent = '继续';
+          // 延迟取消朗读
+          setTimeout(() => {
+            window.speechSynthesis.cancel();
+            // 稍后继续朗读（应用新语速）
+            setTimeout(() => {
+              currentPosition = savedPosition;
+              spokenTextLength = 0;
+              startSpeaking(currentPosition);
+            }, 50);
+          }, 50);
+        } else if (isPaused) {
+          // 如果已经暂停，直接应用新语速继续
+          setTimeout(() => {
+            currentPosition = savedPosition;
+            spokenTextLength = 0;
+            startSpeaking(currentPosition);
+          }, 50);
+        }
       }
     });
 
@@ -399,62 +460,157 @@
       return text || title;
     }
 
+    // 开始朗读（从指定位置开始）
+    function startSpeaking(fromPosition = 0) {
+      // 如果 fullText 为空，重新构建
+      if (!fullText) {
+        fullText = buildSpeechText();
+      }
+      
+      const textToSpeak = fullText.substring(fromPosition);
+      if (!textToSpeak) {
+        // 朗读完成
+        isPlaying = false;
+        isPaused = false;
+        currentPosition = 0;
+        spokenTextLength = 0;
+        fullText = '';
+        ttsBtn.classList.remove('playing');
+        ttsBtn.classList.remove('paused');
+        ttsIcon.textContent = '🔊';
+        ttsText.textContent = '朗读';
+        return;
+      }
+
+      utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'zh-CN';
+      utterance.rate = currentRate;
+      
+      if (currentVoice) {
+        utterance.voice = currentVoice;
+      }
+      utterance.pitch = 1.0;
+
+      // 估算已朗读的字符数（用于暂停时记录位置）
+      const startTime = Date.now();
+      const estimatedCharsPerSecond = 4.5 * currentRate; // 估算每秒朗读的字符数
+
+      utterance.onstart = () => {
+        isPlaying = true;
+        isPaused = false;
+        ttsBtn.classList.add('playing');
+        ttsIcon.textContent = '⏸';
+        ttsText.textContent = '暂停';
+      };
+
+      utterance.onend = () => {
+        // 本段朗读完成，继续下一段
+        currentPosition = fullText.length;
+        isPlaying = false;
+        isPaused = false;
+        currentPosition = 0;
+        spokenTextLength = 0;
+        ttsBtn.classList.remove('playing');
+        ttsIcon.textContent = '🔊';
+        ttsText.textContent = '朗读';
+      };
+
+      utterance.onerror = (e) => {
+        // 如果是主动取消（双击或暂停），不显示错误
+        if (e.error === 'canceled' || e.error === 'interrupted') {
+          // 如果处于暂停状态，不显示错误，保持UI不变
+          if (isPaused) {
+            return;
+          }
+          // 如果正在播放但没有暂停，说明是外部取消（如双击），不显示错误但重置状态
+          if (isPlaying) {
+            // 不显示错误，但会由双击事件处理重置状态
+            return;
+          }
+        }
+        console.error('朗读错误:', e);
+        // 只有非暂停状态下的错误才重置
+        if (!isPaused) {
+          isPlaying = false;
+          isPaused = false;
+          currentPosition = 0;
+          spokenTextLength = 0;
+          ttsBtn.classList.remove('playing');
+          ttsBtn.classList.remove('paused');
+          ttsIcon.textContent = '🔊';
+          ttsText.textContent = '朗读';
+          showToast('朗读出错，请重试', 'error');
+        }
+      };
+
+      // 使用边界事件来更准确地跟踪朗读位置
+      utterance.onboundary = (e) => {
+        if (e.name === 'word' || e.name === 'sentence') {
+          // 记录当前朗读到的位置
+          spokenTextLength = e.charIndex;
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
     ttsBtn.addEventListener('click', () => {
       if (!window.speechSynthesis) {
         showToast('您的浏览器不支持语音朗读功能', 'error');
         return;
       }
 
-      if (isPlaying) {
-        // 停止朗读
-        window.speechSynthesis.cancel();
+      if (isPlaying && !isPaused) {
+        // 暂停朗读 - 先设置标志，再取消
+        isPaused = true;
         isPlaying = false;
+        // 记录当前位置（加上之前的位置）
+        currentPosition += spokenTextLength;
+        // 先更新UI，再取消朗读
         ttsBtn.classList.remove('playing');
-        ttsIcon.textContent = '🔊';
-        ttsText.textContent = '朗读';
+        ttsBtn.classList.add('paused');
+        ttsIcon.textContent = '▶';
+        ttsText.textContent = '继续';
+        // 延迟一点再取消，确保标志已设置
+        setTimeout(() => {
+          window.speechSynthesis.cancel();
+        }, 50);
+        showToast('已暂停，点击继续朗读', 'info');
+      } else if (isPaused) {
+        // 继续朗读
+        spokenTextLength = 0;
+        startSpeaking(currentPosition);
       } else {
-        // 开始朗读
-        const text = buildSpeechText();
-        if (!text) {
+        // 开始新的朗读
+        fullText = buildSpeechText();
+        if (!fullText) {
           showToast('没有可朗读的内容', 'error');
           return;
         }
-
-        utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-CN';
-        utterance.rate = currentRate;
-        
-        // 应用选择的声音
-        if (currentVoice) {
-          utterance.voice = currentVoice;
-        }
-        utterance.pitch = 1.0;
-
-        utterance.onstart = () => {
-          isPlaying = true;
-          ttsBtn.classList.add('playing');
-          ttsIcon.textContent = '⏸';
-          ttsText.textContent = '停止';
-        };
-
-        utterance.onend = () => {
-          isPlaying = false;
-          ttsBtn.classList.remove('playing');
-          ttsIcon.textContent = '🔊';
-          ttsText.textContent = '朗读';
-        };
-
-        utterance.onerror = (e) => {
-          console.error('朗读错误:', e);
-          isPlaying = false;
-          ttsBtn.classList.remove('playing');
-          ttsIcon.textContent = '🔊';
-          ttsText.textContent = '朗读';
-          showToast('朗读出错，请重试', 'error');
-        };
-
-        window.speechSynthesis.speak(utterance);
+        currentPosition = 0;
+        spokenTextLength = 0;
+        startSpeaking(0);
       }
+    });
+
+    // 双击停止朗读（完全重置）
+    ttsBtn.addEventListener('dblclick', () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      // 延迟重置状态，确保 onerror 事件能正确处理
+      setTimeout(() => {
+        isPlaying = false;
+        isPaused = false;
+        currentPosition = 0;
+        spokenTextLength = 0;
+        fullText = '';
+        ttsBtn.classList.remove('playing');
+        ttsBtn.classList.remove('paused');
+        ttsIcon.textContent = '🔊';
+        ttsText.textContent = '朗读';
+        showToast('朗读已停止', 'info');
+      }, 100);
     });
 
     // 页面卸载时停止朗读
@@ -462,6 +618,11 @@
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      // 重置所有状态
+      isPlaying = false;
+      isPaused = false;
+      currentPosition = 0;
+      spokenTextLength = 0;
     });
   </script>
 </body>
