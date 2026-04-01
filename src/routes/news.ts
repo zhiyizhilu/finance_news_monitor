@@ -19,6 +19,9 @@ router.get('/', (req, res) => {
   // 日期范围：如果参数不存在（首次访问），默认近两天；如果参数为空字符串（点击"全部"），显示全部时间
   const dateRangeParam = req.query.dateRange;
   const dateRange = dateRangeParam === undefined ? '2days' : (dateRangeParam as string);
+  // 分数筛选：默认60分以上，'all'表示全部
+  const scoreFilterParam = req.query.score;
+  const scoreFilter = scoreFilterParam === undefined ? '60' : (scoreFilterParam as string);
 
   // 获取所有持仓列表
   const positions = queryAll('SELECT * FROM positions ORDER BY createdAt DESC');
@@ -131,6 +134,14 @@ router.get('/', (req, res) => {
     });
   }
 
+  // 分数筛选（'all' 表示全部，不进行筛选）
+  if (scoreFilter && scoreFilter !== 'all') {
+    const minScore = parseInt(scoreFilter, 10);
+    if (!isNaN(minScore)) {
+      articles = articles.filter(a => (a.aiImpactScore || 0) >= minScore);
+    }
+  }
+
   // 排序
   articles.sort((a, b) => {
     let valA: any, valB: any;
@@ -178,7 +189,8 @@ router.get('/', (req, res) => {
     positionId,
     dateRange,
     sources: sourceList,
-    sourceFilter
+    sourceFilter,
+    scoreFilter
   });
 });
 
