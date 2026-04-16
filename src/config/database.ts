@@ -508,5 +508,23 @@ export function getDb() {
       get: (...params: any[]) => queryOne(sql, params),
       run: (...params: any[]) => run(sql, params)
     })
-  };
+  }
+}
+
+// 删除7天前的新闻
+export function deleteOldArticles(): void {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const originalCount = articlesDb.articles.length;
+  articlesDb.articles = articlesDb.articles.filter(article => {
+    const publishTime = new Date(article.publishTime);
+    return publishTime > sevenDaysAgo;
+  });
+  
+  const deletedCount = originalCount - articlesDb.articles.length;
+  if (deletedCount > 0) {
+    saveArticles();
+    console.log(`✓ 删除了 ${deletedCount} 条7天前的新闻`);
+  }
 }

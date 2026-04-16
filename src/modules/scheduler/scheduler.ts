@@ -4,6 +4,7 @@ import { analyzeAllArticles } from '../analyzer/analyzer';
 import { sendRealtimeNotification, sendScheduledNotification } from '../notifier/notifier';
 import { getAllPositions } from '../analyzer/analyzer';
 import { getSetting } from '../../utils/helpers';
+import { deleteOldArticles } from '../../config/database';
 
 let isRunning = false;
 
@@ -101,6 +102,12 @@ export function startScheduler(): void {
     });
     console.log(`  ✓ 定时汇总: 每天 ${time}`);
   }
+
+  // 每天凌晨2点执行一次，删除7天前的新闻
+  schedule.scheduleJob({ hour: 2, minute: 0 }, () => {
+    deleteOldArticles();
+  });
+  console.log('  ✓ 清理旧新闻: 每天 02:00');
 
   console.log('');
 }

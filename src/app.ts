@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
-import { initDatabase } from './config/database';
+import { initDatabase, deleteOldArticles } from './config/database';
 import indexRoutes from './routes/index';
 import portfolioRoutes from './routes/portfolio';
 import newsRoutes from './routes/news';
@@ -40,6 +40,10 @@ async function start() {
     // 初始化数据库
     await initDatabase();
     console.log('✓ 数据库初始化完成');
+
+    // 清理旧新闻
+    deleteOldArticles();
+    console.log('✓ 旧新闻清理完成');
 
     // 启动定时任务
     startScheduler();
