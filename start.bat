@@ -18,5 +18,8 @@ echo [2/2] 启动服务...
 echo 服务将运行在 http://localhost:3000
 echo 按 Ctrl+C 可停止服务
 echo.
+
+start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:3000"
+
 node dist/app.js
 pause

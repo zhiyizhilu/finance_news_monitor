@@ -6,7 +6,7 @@ import indexRoutes from './routes/index';
 import portfolioRoutes from './routes/portfolio';
 import newsRoutes from './routes/news';
 import settingsRoutes from './routes/settings';
-import { startScheduler } from './modules/scheduler/scheduler';
+import { startScheduler, triggerTask } from './modules/scheduler/scheduler';
 
 dotenv.config();
 
@@ -57,6 +57,16 @@ async function start() {
 ║   本地访问: http://localhost:${PORT}            ║
 ╚═══════════════════════════════════════════╝
       `);
+
+      setTimeout(async () => {
+        console.log('\n🚀 启动时自动执行：采集 + 分析...');
+        try {
+          await triggerTask();
+          console.log('✅ 启动时自动任务执行完成\n');
+        } catch (error) {
+          console.error('❌ 启动时自动任务执行失败:', error);
+        }
+      }, 2000);
     });
   } catch (error) {
     console.error('启动失败:', error);
